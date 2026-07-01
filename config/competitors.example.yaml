@@ -1,0 +1,31 @@
+# Copiez ce fichier en config/competitors.yaml et adaptez-le.
+# Chaque concurrent a un nom, un secteur, un site, et une liste de sources
+# surveillées. Les types de source acceptés :
+# site_web, blog, github, linkedin, rss, changelog, documentation, emploi
+
+competitors:
+  - name: "Exemple Concurrent A"
+    sector: "SaaS RH"
+    website: "https://exemple-concurrent-a.com"
+    monitoring_frequency: "quotidien"   # horaire | quotidien | hebdomadaire
+    sources:
+      - type: changelog
+        url: "https://exemple-concurrent-a.com/changelog"
+      - type: site_web
+        url: "https://exemple-concurrent-a.com/pricing"
+      - type: rss
+        url: "https://exemple-concurrent-a.com/blog/feed"
+      - type: github
+        url: "https://github.com/exemple-concurrent-a"
+      - type: emploi
+        url: "https://exemple-concurrent-a.com/careers"
+
+  - name: "Exemple Concurrent B"
+    sector: "SaaS RH"
+    website: "https://exemple-concurrent-b.com"
+    monitoring_frequency: "quotidien"
+    sources:
+      - type: changelog
+        url: "https://exemple-concurrent-b.com/whats-new"
+      - type: site_web
+        url: "https://exemple-concurrent-b.com/tarifs"
