@@ -176,7 +176,7 @@ Une IA qui alerte.
 
 **Lucas Rajany**
 
-Projet développé dans l'univers **FairyLord**.
+Projet développé par la **FairyLord**.
 
 ---
 
