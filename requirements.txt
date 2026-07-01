@@ -1,0 +1,6 @@
+requests>=2.32
+beautifulsoup4>=4.12
+PyYAML>=6.0
+feedparser>=6.0
+groq>=0.11.0
+google-generativeai>=0.8.0
