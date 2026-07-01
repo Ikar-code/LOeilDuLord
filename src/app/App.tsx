@@ -200,7 +200,7 @@ function Sidebar({ page, setPage }: { page: string; setPage: (p: string) => void
           <Activity className="w-4 h-4 text-white" />
         </div>
         <div>
-          <div className="text-[#e2e2f0] font-semibold text-sm leading-none">IntelliWatch</div>
+          <div className="text-[#e2e2f0] font-semibold text-sm leading-none">LOeilDuLord</div>
           <div className="text-[10px] text-[#7878a0] mt-0.5 font-mono">v2.4.1</div>
         </div>
       </div>
@@ -302,7 +302,7 @@ function LoginPage({ onLogin }: { onLogin: () => void }) {
           <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#6366f1] to-[#8b5cf6] flex items-center justify-center">
             <Activity className="w-5 h-5 text-white" />
           </div>
-          <span className="text-[#e2e2f0] font-bold text-xl">IntelliWatch</span>
+          <span className="text-[#e2e2f0] font-bold text-xl">LOeilDuLord</span>
         </div>
 
         <div className="relative z-10">
@@ -338,7 +338,7 @@ function LoginPage({ onLogin }: { onLogin: () => void }) {
         </div>
 
         <div className="relative z-10 flex items-center gap-4 text-[#5858a0] text-xs">
-          <span>© 2026 IntelliWatch</span>
+          <span>© 2026 LOeilDuLord</span>
           <span>·</span>
           <span className="hover:text-[#7878a0] cursor-pointer">Confidentialité</span>
           <span>·</span>
@@ -354,7 +354,7 @@ function LoginPage({ onLogin }: { onLogin: () => void }) {
               {mode === "login" ? "Bon retour 👋" : "Créer un compte"}
             </h2>
             <p className="text-[#7878a0] text-sm">
-              {mode === "login" ? "Connectez-vous à votre espace IntelliWatch" : "Commencez votre période d'essai gratuit de 14 jours"}
+              {mode === "login" ? "Connectez-vous à votre espace LOeilDuLord" : "Commencez votre période d'essai gratuit de 14 jours"}
             </p>
           </div>
 
