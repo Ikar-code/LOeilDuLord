@@ -1,187 +1,217 @@
 # Loeil du Lord
 
-> L'intelligence qui surveille vos concurrents 24h/24.
+> **L'intelligence qui surveille vos concurrents.**
 
-**Loeil du Lord** est une plateforme de veille concurrentielle basée sur une architecture multi-agents IA.  
-Elle collecte, analyse et synthétise automatiquement des informations stratégiques sur les concurrents, leurs produits, leurs technologies, leurs recrutements et leurs évolutions marché.
+Loeil du Lord est une plateforme de veille concurrentielle basée sur une architecture **multi-agents IA**. Elle automatise la collecte, l'analyse, la vérification et la synthèse d'informations stratégiques afin de fournir des rapports exploitables sur vos concurrents.
 
-Le projet fait partie de l'écosystème **FairyLord** :
+Ce projet fait partie de l'écosystème **FairyLord**, aux côtés de :
 
-- 📰 Le Fil du Lord → actualités
-- 💰 Le Capital du Lord → finance
-- 👁️ Loeil du Lord → intelligence concurrentielle
-
----
-
-## ✨ Fonctionnalités
-
-### 🔎 Surveillance concurrentielle
-
-- Suivi automatique des concurrents
-- Analyse des changements importants
-- Détection de signaux faibles
-- Surveillance des sources publiques
-
-### 🤖 Architecture multi-agents IA
-
-Plusieurs agents spécialisés collaborent :
-
-- Agent Recherche
-- Agent Analyse
-- Agent Vérification
-- Agent Synthèse
-- Agent Alertes
-
-Chaque agent possède un rôle spécifique dans le pipeline d'intelligence.
-
-### 📊 Rapports IA
-
-Génération automatique de rapports :
-
-- Résumé exécutif
-- Faits importants détectés
-- Analyse stratégique
-- Recommandations
-
-### 🚨 Système d'alertes
-
-Détection automatique :
-
-- Changements tarifaires
-- Nouveaux produits
-- Recrutements stratégiques
-- Levées de fonds
-- Mouvements importants du marché
+- 📰 Le Fil du Lord
+- 💰 Le Capital du Lord
+- 👁️ Loeil du Lord
 
 ---
 
-## 🖥️ Interface
+## Aperçu
 
-Loeil du Lord propose un tableau de bord complet :
+Loeil du Lord combine :
 
-- Dashboard stratégique
-- Gestion des concurrents
-- Sources surveillées
-- Rapports IA
-- Historique des analyses
-- Alertes
-- Configuration des agents
-- Gestion du profil
+- une interface web moderne développée avec **React**, **TypeScript** et **Tailwind CSS** ;
+- un moteur de veille écrit en **Python** reposant sur une architecture multi-agents ;
+- une base de données **Supabase** ;
+- une automatisation via **GitHub Actions**.
+
+Chaque agent possède une responsabilité précise dans le pipeline de veille afin de produire des rapports fiables et exploitables.
 
 ---
 
-## 🏗️ Architecture
+## Fonctionnalités
 
-Le projet repose sur une approche :
+- 📡 Surveillance automatique des concurrents
+- 🌐 Collecte de données depuis plusieurs sources
+- 🤖 Analyse par IA
+- ✅ Vérification des informations
+- 📝 Génération automatique de rapports
+- 🚨 Alertes stratégiques
+- 📊 Tableau de bord interactif
+- 📚 Historique des analyses
+- ⚙️ Gestion des agents et des paramètres
+
+---
+
+# Architecture
 
 ```
-Sources
-   |
-   ↓
-Agents de collecte
-   |
-   ↓
-Agents d'analyse IA
-   |
-   ↓
-Vérification
-   |
-   ↓
-Rapport stratégique
-   |
-   ↓
-Utilisateur
+                ┌────────────────────┐
+                │    Sources Web     │
+                └─────────┬──────────┘
+                          │
+                          ▼
+                 Agent Recherche
+                          │
+                          ▼
+                 Agent Scraping
+                          │
+                          ▼
+               Agent Vérification
+                          │
+                          ▼
+                  Agent Analyse
+                          │
+                          ▼
+                 Agent Rédaction
+                          │
+                          ▼
+             Agent Contrôle Qualité
+                          │
+                          ▼
+                Agent Publication
+                          │
+                          ▼
+                    Interface React
 ```
 
 ---
 
-## 🛠️ Technologies utilisées
+# Structure du projet
 
-### Frontend
+```text
+.
+├── src/                 # Frontend React
+├── radar/               # Backend Python et agents IA
+├── supabase/            # Schéma SQL
+├── config/              # Configurations
+├── .github/             # GitHub Actions
+├── requirements.txt
+└── run.py
+```
+
+---
+
+# Les agents IA
+
+Le moteur de veille est composé de plusieurs agents spécialisés.
+
+| Agent | Rôle |
+|--------|------|
+| Recherche | Recherche de nouvelles informations |
+| Scraping | Extraction du contenu des sources |
+| Vérification | Validation et croisement des informations |
+| Analyse | Analyse stratégique et sémantique |
+| Rédaction | Génération des rapports |
+| Contrôle Qualité | Vérification de la cohérence |
+| Publication | Diffusion des rapports et alertes |
+
+---
+
+# Technologies
+
+## Frontend
 
 - React
 - TypeScript
 - Tailwind CSS
-- Lucide Icons
+- Vite
+- Lucide React
 
-### Intelligence artificielle
+## Backend
 
-- Agents IA spécialisés
-- Analyse sémantique
-- Génération de synthèses
+- Python
+- Supabase
+- Architecture Multi-Agents
 
-### Backend (prévu)
+## Automatisation
 
-- API
-- Base de données
-- Gestion des sources
-- Orchestration des agents
+- GitHub Actions
 
 ---
 
-## 🚀 Installation
+# Installation
 
-Clone le projet :
+## Cloner le dépôt
 
 ```bash
-git clone https://github.com/votre-utilisateur/loeil-du-lord.git
+git clone https://github.com/<utilisateur>/loeil-du-lord.git
+cd loeil-du-lord
 ```
 
-Installation des dépendances :
+## Frontend
 
 ```bash
 npm install
-```
-
-Lancement du projet :
-
-```bash
 npm run dev
 ```
 
----
+## Backend
 
-## 📁 Structure du projet
+Créer un environnement virtuel :
 
-```
-loeil-du-lord/
-
-├── src/
-│   ├── components/
-│   ├── pages/
-│   ├── agents/
-│   ├── data/
-│   └── app.tsx
-│
-├── public/
-│
-├── package.json
-│
-└── README.md
+```bash
+python -m venv .venv
 ```
 
+Activation :
+
+Windows
+
+```bash
+.venv\Scripts\activate
+```
+
+Linux / macOS
+
+```bash
+source .venv/bin/activate
+```
+
+Installer les dépendances :
+
+```bash
+pip install -r requirements.txt
+```
+
+Lancer le moteur :
+
+```bash
+python run.py
+```
+
 ---
 
-## 🎯 Vision
+# Documentation
 
-L'objectif de Loeil du Lord est de créer un véritable système d'intelligence économique automatisé capable de transformer des milliers d'informations dispersées en décisions stratégiques exploitables.
+La documentation détaillée du moteur de veille est disponible dans :
 
-Une IA qui observe.
-Une IA qui comprend.
-Une IA qui alerte.
+```
+radar/README.md
+```
 
 ---
 
-## 👤 Auteur
+# Feuille de route
+
+- [x] Interface React
+- [x] Architecture multi-agents
+- [x] Génération de rapports
+- [ ] Scraping avancé
+- [ ] Planification automatique
+- [ ] Notifications temps réel
+- [ ] API publique
+- [ ] Docker
+- [ ] Déploiement cloud
+
+---
+
+# Auteur
 
 **Lucas Rajany**
 
-Projet développé par la **FairyLord**.
+Projet développé dans l'univers **FairyLord**.
 
 ---
 
-## 📜 Licence
+# Licence
 
-Ce projet est sous licence **Apache License 2.0**.
+Distribué sous licence **Apache License 2.0**.
 
-Voir le fichier [LICENSE](LICENSE) pour plus d'informations.
+Voir le fichier **LICENSE** pour plus d'informations.
