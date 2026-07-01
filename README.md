@@ -131,7 +131,7 @@ Le moteur de veille est composé de plusieurs agents spécialisés.
 ## Cloner le dépôt
 
 ```bash
-git clone https://github.com/<utilisateur>/loeil-du-lord.git
+git clone https://github.com/ikar-code/loeildulord.git
 cd loeil-du-lord
 ```
 
