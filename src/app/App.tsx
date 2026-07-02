@@ -676,15 +676,23 @@ function DiscoveryPage() {
               {(activeRequest.results || []).length === 0 ? (
                 <EmptyState label="Aucun concurrent identifié avec confiance suffisante." />
               ) : (
-                <div className="space-y-2">
-                  {(activeRequest.results || []).map((r: any, i: number) => (
-                    <div key={i} className="flex items-center gap-3 p-2.5 rounded-lg bg-white/3">
-                      <Avatar name={r.name} color={colorFor(r.name)} size="sm" />
-                      <span className="text-[#c4c4d8] text-xs flex-1">{r.name}</span>
-                      {r.website && <span className="text-[#5858a0] text-[10px] font-mono">{r.website}</span>}
+                <>
+                  {activeRequest.results.some((r: any) => r.verified === false) && (
+                    <div className="flex items-center gap-2 p-2.5 rounded-lg bg-amber-500/8 border border-amber-500/15 mb-3">
+                      <AlertTriangle className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                      <p className="text-amber-400/80 text-[11px]">Recherche web indisponible pour cette demande — liste basée sur les connaissances générales du modèle, à vérifier avant de laisser tourner la surveillance.</p>
                     </div>
-                  ))}
-                </div>
+                  )}
+                  <div className="space-y-2">
+                    {(activeRequest.results || []).map((r: any, i: number) => (
+                      <div key={i} className="flex items-center gap-3 p-2.5 rounded-lg bg-white/3">
+                        <Avatar name={r.name} color={colorFor(r.name)} size="sm" />
+                        <span className="text-[#c4c4d8] text-xs flex-1">{r.name}</span>
+                        {r.website && <span className="text-[#5858a0] text-[10px] font-mono">{r.website}</span>}
+                      </div>
+                    ))}
+                  </div>
+                </>
               )}
               <p className="text-[10px] text-[#5858a0] mt-3">Déjà ajoutés à la page Concurrents — vérifie-les et désactive ceux qui ne sont pas pertinents.</p>
             </div>
