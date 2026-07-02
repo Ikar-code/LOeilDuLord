@@ -188,20 +188,6 @@ radar/README.md
 
 ---
 
-# Feuille de route
-
-- [x] Interface React
-- [x] Architecture multi-agents
-- [x] Génération de rapports
-- [ ] Scraping avancé
-- [ ] Planification automatique
-- [ ] Notifications temps réel
-- [ ] API publique
-- [ ] Docker
-- [ ] Déploiement cloud
-
----
-
 # Auteur
 
 **Lucas Rajany**
