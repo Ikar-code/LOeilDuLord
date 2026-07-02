@@ -171,7 +171,7 @@ def _normalize_website(website):
 
 
 def save_discovered_competitors(db, config, competitors):
-    owner = config["OWNER_USER_ID"]
+    owner = config["USER_ID"]
     existing_names = {c["name"].lower() for c in db.select("competitors", {"user_id": owner})}
     created = []
     for c in competitors:
