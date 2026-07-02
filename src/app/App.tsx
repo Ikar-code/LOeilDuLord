@@ -1,103 +1,24 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
-  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
-  ResponsiveContainer, BarChart, Bar,
+  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from "recharts";
 import {
   LayoutDashboard, Users, Globe, FileText, Bot, Clock, Bell, Settings, User,
-  Search, Plus, Activity, TrendingUp, AlertCircle, Loader2, ArrowUpRight,
-  Eye, Edit, Trash2, Download, Filter, RefreshCw, Zap, Shield, Database,
-  ExternalLink, MoreHorizontal, AlertTriangle, X, ChevronRight, LogOut, Link,
-  Github, Lock, Key, CheckCircle2, XCircle, Building2, Briefcase, BarChart2,
-  Star, CreditCard, Rss, Newspaper, Mail, ArrowLeft, Info, Tag, Layers, Target,
-  Terminal, CheckCircle, Circle, PauseCircle, ChevronDown, Copy, Cpu, Award,
-  TrendingDown, MapPin, Phone, Globe2, Sliders, Webhook, Save, Eye as EyeIcon,
-  EyeOff, BadgeCheck,
+  Search, Plus, Activity, AlertCircle, Loader2, ArrowUpRight,
+  Edit, Trash2, Download, Filter, RefreshCw, Zap, Shield, Database,
+  ExternalLink, MoreHorizontal, AlertTriangle, ChevronRight, LogOut, Link as LinkIcon,
+  Github, Key, CheckCircle2, XCircle, Building2, BarChart2,
+  Star, ArrowLeft, Target, Circle, PauseCircle, PlayCircle, Copy,
+  Globe2, Save, Eye as EyeIcon, EyeOff, BadgeCheck,
 } from "lucide-react";
+import { supabase } from "./lib/supabaseClient";
+import { AGENT_META, AGENT_ORDER, type AgentName } from "./lib/agentMeta";
+import {
+  colorFor, initialsFor, timeAgo, formatDateFr, formatTimeFr,
+  freqLabel, agentStatusLabel, avgDurationLabel,
+} from "./lib/format";
 
-// ─── DATA ─────────────────────────────────────────────────────────────────────
-
-const activityData = [
-  { day: "Lun", analyses: 143, alertes: 12, rapports: 3 },
-  { day: "Mar", analyses: 189, alertes: 18, rapports: 5 },
-  { day: "Mer", analyses: 167, alertes: 9, rapports: 4 },
-  { day: "Jeu", analyses: 212, alertes: 23, rapports: 6 },
-  { day: "Ven", analyses: 198, alertes: 15, rapports: 5 },
-  { day: "Sam", analyses: 134, alertes: 8, rapports: 2 },
-  { day: "Dim", analyses: 156, alertes: 11, rapports: 3 },
-];
-
-const competitors = [
-  { id: 1, name: "Stripe", initials: "ST", color: "#6366f1", sector: "Paiements en ligne", website: "stripe.com", frequency: "Quotidien", status: "actif", lastScan: "Il y a 23 min", changes: 3 },
-  { id: 2, name: "Notion", initials: "NO", color: "#8b5cf6", sector: "Productivité SaaS", website: "notion.so", frequency: "Quotidien", status: "actif", lastScan: "Il y a 1h", changes: 1 },
-  { id: 3, name: "Linear", initials: "LN", color: "#22d3ee", sector: "Gestion de projet", website: "linear.app", frequency: "Bihebdomadaire", status: "actif", lastScan: "Il y a 2h", changes: 0 },
-  { id: 4, name: "Vercel", initials: "VC", color: "#e2e2f0", sector: "Cloud & Déploiement", website: "vercel.com", frequency: "Hebdomadaire", status: "actif", lastScan: "Il y a 3h", changes: 2 },
-  { id: 5, name: "Figma", initials: "FG", color: "#f59e0b", sector: "Design collaboratif", website: "figma.com", frequency: "Quotidien", status: "actif", lastScan: "Il y a 45 min", changes: 1 },
-  { id: 6, name: "Airtable", initials: "AT", color: "#10b981", sector: "Base de données SaaS", website: "airtable.com", frequency: "Hebdomadaire", status: "en pause", lastScan: "Il y a 2 jours", changes: 0 },
-  { id: 7, name: "Loom", initials: "LM", color: "#ef4444", sector: "Vidéo asynchrone", website: "loom.com", frequency: "Mensuel", status: "erreur", lastScan: "Il y a 5h", changes: 0 },
-  { id: 8, name: "Miro", initials: "MI", color: "#f97316", sector: "Whiteboard collaboratif", website: "miro.com", frequency: "Bihebdomadaire", status: "actif", lastScan: "Il y a 1h 30", changes: 1 },
-];
-
-const sources = [
-  { id: 1, type: "Blog", name: "Blog Stripe", url: "stripe.com/blog", competitor: "Stripe", reliability: 98, lastScan: "23 min", articlesFound: 3 },
-  { id: 2, type: "Changelog", name: "Stripe Changelog", url: "stripe.com/changelog", competitor: "Stripe", reliability: 99, lastScan: "23 min", articlesFound: 1 },
-  { id: 3, type: "GitHub", name: "stripe/stripe-js", url: "github.com/stripe/stripe-js", competitor: "Stripe", reliability: 97, lastScan: "1h", articlesFound: 5 },
-  { id: 4, type: "LinkedIn", name: "Stripe LinkedIn", url: "linkedin.com/company/stripe", competitor: "Stripe", reliability: 82, lastScan: "2h", articlesFound: 2 },
-  { id: 5, type: "Blog", name: "Notion Blog", url: "notion.so/blog", competitor: "Notion", reliability: 96, lastScan: "1h", articlesFound: 1 },
-  { id: 6, type: "RSS", name: "Linear Feed", url: "linear.app/changelog/rss", competitor: "Linear", reliability: 99, lastScan: "2h", articlesFound: 0 },
-  { id: 7, type: "Actualités", name: "TechCrunch – Vercel", url: "techcrunch.com/search/vercel", competitor: "Vercel", reliability: 75, lastScan: "3h", articlesFound: 2 },
-  { id: 8, type: "Documentation", name: "Figma Dev Mode", url: "figma.com/dev-mode", competitor: "Figma", reliability: 94, lastScan: "45 min", articlesFound: 1 },
-  { id: 9, type: "Offres d'emploi", name: "Notion Jobs", url: "notion.so/jobs", competitor: "Notion", reliability: 88, lastScan: "1h", articlesFound: 4 },
-  { id: 10, type: "GitHub", name: "vercel/next.js", url: "github.com/vercel/next.js", competitor: "Vercel", reliability: 99, lastScan: "3h", articlesFound: 8 },
-  { id: 11, type: "Twitter/X", name: "@stripe", url: "twitter.com/stripe", competitor: "Stripe", reliability: 71, lastScan: "30 min", articlesFound: 3 },
-  { id: 12, type: "Product Hunt", name: "Linear — Product Hunt", url: "producthunt.com/products/linear", competitor: "Linear", reliability: 83, lastScan: "4h", articlesFound: 0 },
-];
-
-const reports = [
-  { id: 1, title: "Rapport hebdomadaire : Stripe — Semaine 26", competitor: "Stripe", date: "1 juillet 2026", confidence: 94, sources: 23, summary: "Stripe a annoncé une nouvelle API pour les paiements récurrents optimisés par IA, une réduction des frais pour les volumes élevés, et le recrutement massif d'ingénieurs ML en Europe.", tags: ["Nouvelle fonctionnalité", "Tarification", "Recrutement"], status: "publié" },
-  { id: 2, title: "Analyse approfondie : Notion AI — Fonctionnalités Q2 2026", competitor: "Notion", date: "29 juin 2026", confidence: 91, sources: 18, summary: "Notion a lancé Notion AI 2.0 avec des capacités de génération de bases de données intelligentes, intégration Slack améliorée et un nouveau modèle de tarification freemium.", tags: ["IA", "Nouveau produit", "Tarification"], status: "publié" },
-  { id: 3, title: "Veille concurrentielle : Linear vs Jira — Positionnement", competitor: "Linear", date: "28 juin 2026", confidence: 87, sources: 15, summary: "Linear gagne des parts de marché sur les équipes tech premium. Nouveaux templates enterprise et intégrations GitHub Actions renforcent l'offre face à Jira.", tags: ["Stratégie", "Marché", "Intégrations"], status: "publié" },
-  { id: 4, title: "Alerte stratégique : Vercel — Levée de fonds Série E", competitor: "Vercel", date: "27 juin 2026", confidence: 98, sources: 31, summary: "Vercel a annoncé une levée de fonds de 250M$ pour accélérer son expansion sur les marchés asiatiques et renforcer son offre enterprise avec des fonctionnalités de conformité avancées.", tags: ["Financement", "Expansion", "Enterprise"], status: "publié" },
-  { id: 5, title: "Rapport mensuel : Figma — Fonctionnalités juin 2026", competitor: "Figma", date: "25 juin 2026", confidence: 89, sources: 20, summary: "Figma Dev Mode 2.0, variable tokens améliorés, annotations natives et intégration Cursor AI transforment le workflow designer-développeur.", tags: ["Nouveau produit", "Dev Mode", "IA"], status: "archivé" },
-  { id: 6, title: "Veille emploi : Stripe — Signaux recrutement ML/IA", competitor: "Stripe", date: "24 juin 2026", confidence: 82, sources: 12, summary: "47 nouvelles offres d'emploi ML/IA détectées chez Stripe en juin, concentration sur fraud detection, recommendation systems et modèles de risque financier.", tags: ["Recrutement", "IA", "Signal"], status: "publié" },
-];
-
-const selectedReport = reports[0];
-
-const agents = [
-  { id: 1, name: "Agent Recherche", icon: Search, color: "#6366f1", description: "Découverte et indexation de nouvelles sources pertinentes", status: "actif", progress: 73, tasksToday: 284, avgTime: "2.3s", lastRun: "Il y a 12 min", recent: ["Indexation blog Stripe", "Scan GitHub vercel/next.js", "Détection nouvelles offres Notion"] },
-  { id: 2, name: "Agent Scraping", icon: Database, color: "#8b5cf6", description: "Extraction et collecte des données brutes depuis les sources", status: "actif", progress: 89, tasksToday: 1247, avgTime: "0.8s", lastRun: "Il y a 3 min", recent: ["Scraping stripe.com/changelog", "Extraction LinkedIn Figma", "Collecte RSS Linear"] },
-  { id: 3, name: "Agent Vérification", icon: Shield, color: "#22d3ee", description: "Vérification croisée et validation de l'authenticité des infos", status: "actif", progress: 61, tasksToday: 892, avgTime: "1.5s", lastRun: "Il y a 7 min", recent: ["Vérification levée Vercel", "Cross-check API Stripe", "Validation TechCrunch"] },
-  { id: 4, name: "Agent Analyse", icon: BarChart2, color: "#f59e0b", description: "Analyse sémantique et extraction des insights stratégiques", status: "actif", progress: 45, tasksToday: 67, avgTime: "8.2s", lastRun: "Il y a 18 min", recent: ["Analyse sentiment Notion AI", "Extraction signaux Stripe", "Évaluation impact Linear"] },
-  { id: 5, name: "Agent Rédaction", icon: FileText, color: "#10b981", description: "Génération des synthèses et rapports en français structurés", status: "en attente", progress: 0, tasksToday: 8, avgTime: "45s", lastRun: "Il y a 2h", recent: ["Rédaction rapport Stripe S26", "Synthèse Notion AI Q2", "Rapport Vercel Série E"] },
-  { id: 6, name: "Agent Contrôle QA", icon: CheckCircle2, color: "#ef4444", description: "Relecture, correction et validation qualité des rapports", status: "en attente", progress: 0, tasksToday: 8, avgTime: "12s", lastRun: "Il y a 2h 10", recent: ["Validation rapport Stripe", "QA synthèse Notion", "Révision rapport Vercel"] },
-  { id: 7, name: "Agent Publication", icon: Zap, color: "#f97316", description: "Distribution des rapports validés vers les canaux configurés", status: "inactif", progress: 0, tasksToday: 5, avgTime: "3.1s", lastRun: "Il y a 3h", recent: ["Publication rapport Stripe", "Envoi digest Figma", "Notification Slack Vercel"] },
-];
-
-const historyItems = [
-  { id: 1, date: "1 juillet 2026", time: "14:32", competitor: "Stripe", agent: "Recherche", action: "5 nouvelles sources découvertes", type: "découverte" },
-  { id: 2, date: "1 juillet 2026", time: "14:18", competitor: "Stripe", agent: "Scraping", action: "Changelog mis à jour — nouvelle entrée API", type: "changement" },
-  { id: 3, date: "1 juillet 2026", time: "13:45", competitor: "Notion", agent: "Analyse", action: "Analyse complétée — 3 insights détectés", type: "analyse" },
-  { id: 4, date: "1 juillet 2026", time: "12:30", competitor: "Vercel", agent: "Vérification", action: "Levée de fonds vérifiée — 3 sources croisées", type: "vérification" },
-  { id: 5, date: "1 juillet 2026", time: "11:15", competitor: "Linear", agent: "Publication", action: "Rapport hebdomadaire généré et publié", type: "publication" },
-  { id: 6, date: "30 juin 2026", time: "16:20", competitor: "Figma", agent: "Scraping", action: "Dev Mode 2.0 — nouvelles fonctionnalités détectées", type: "changement" },
-  { id: 7, date: "30 juin 2026", time: "15:00", competitor: "Stripe", agent: "Recherche", action: "47 nouvelles offres emploi ML/IA indexées", type: "découverte" },
-  { id: 8, date: "30 juin 2026", time: "09:45", competitor: "Notion", agent: "Publication", action: "Rapport Notion AI Q2 publié — Slack + Email", type: "publication" },
-  { id: 9, date: "29 juin 2026", time: "18:30", competitor: "Vercel", agent: "Rédaction", action: "Alerte stratégique Série E rédigée", type: "rapport" },
-  { id: 10, date: "29 juin 2026", time: "14:10", competitor: "Airtable", agent: "Scraping", action: "Surveillance suspendue — erreur authentification", type: "erreur" },
-];
-
-const alertsData = [
-  { id: 1, priority: "critique", type: "Levée de fonds", competitor: "Vercel", title: "Vercel lève 250M$ en Série E", description: "Vercel a annoncé une levée de fonds historique de 250 millions de dollars dirigée par Accel Partners pour accélérer son expansion internationale.", date: "27 juin 2026", read: false },
-  { id: 2, priority: "haute", type: "Nouveau produit", competitor: "Stripe", title: "Stripe lance une API IA pour paiements récurrents", description: "Nouvelle API Stripe AI permettant l'optimisation automatique des paiements récurrents avec réduction du churn grâce au machine learning.", date: "1 juillet 2026", read: false },
-  { id: 3, priority: "haute", type: "Nouveau produit", competitor: "Notion", title: "Notion AI 2.0 — Génération de bases de données intelligentes", description: "Notion déploie Notion AI 2.0 avec capacités de génération automatique de bases de données structurées à partir de texte naturel.", date: "29 juin 2026", read: false },
-  { id: 4, priority: "moyenne", type: "Tarification", competitor: "Stripe", title: "Réduction de frais pour volumes > 1M$/mois", description: "Stripe annonce des tarifs préférentiels pour les marchands dépassant 1 million de dollars de volume mensuel, baisse de 0.1% des frais.", date: "1 juillet 2026", read: true },
-  { id: 5, priority: "moyenne", type: "Recrutement", competitor: "Stripe", title: "47 nouvelles offres ML/IA publiées en juin", description: "Signal fort de développement produit IA : Stripe recrute massivement des ingénieurs spécialisés en fraud detection et modèles de risque.", date: "30 juin 2026", read: true },
-  { id: 6, priority: "haute", type: "Nouvelle fonctionnalité", competitor: "Figma", title: "Figma Dev Mode 2.0 — Intégration Cursor AI", description: "Figma lance une intégration native avec Cursor AI permettant la génération de code directement depuis les designs.", date: "25 juin 2026", read: true },
-  { id: 7, priority: "basse", type: "Partenariat", competitor: "Linear", title: "Linear annonce un partenariat avec GitHub Copilot", description: "Intégration approfondie entre Linear et GitHub Copilot pour la création automatique de tickets depuis les suggestions de code.", date: "28 juin 2026", read: true },
-];
-
-// ─── UTILITY COMPONENTS ──────────────────────────────────────────────────────
+// ─── UTILITY COMPONENTS (inchangés visuellement) ────────────────────────────
 
 function StatusBadge({ status }: { status: string }) {
   const map: Record<string, { label: string; dot: string; bg: string }> = {
@@ -106,8 +27,9 @@ function StatusBadge({ status }: { status: string }) {
     erreur: { label: "Erreur", dot: "bg-red-400", bg: "bg-red-500/10 text-red-400 border border-red-500/20" },
     inactif: { label: "Inactif", dot: "bg-[#7878a0]", bg: "bg-white/5 text-[#7878a0] border border-white/8" },
     "en attente": { label: "En attente", dot: "bg-blue-400", bg: "bg-blue-500/10 text-blue-400 border border-blue-500/20" },
-    publié: { label: "Publié", dot: "bg-emerald-400", bg: "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20" },
-    archivé: { label: "Archivé", dot: "bg-[#7878a0]", bg: "bg-white/5 text-[#7878a0] border border-white/8" },
+    publie: { label: "Publié", dot: "bg-emerald-400", bg: "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20" },
+    brouillon: { label: "Brouillon", dot: "bg-[#7878a0]", bg: "bg-white/5 text-[#7878a0] border border-white/8" },
+    rejete: { label: "Rejeté", dot: "bg-red-400", bg: "bg-red-500/10 text-red-400 border border-red-500/20" },
   };
   const c = map[status] ?? { label: status, dot: "bg-[#7878a0]", bg: "bg-white/5 text-[#7878a0]" };
   return (
@@ -120,25 +42,32 @@ function StatusBadge({ status }: { status: string }) {
 
 function PriorityBadge({ priority }: { priority: string }) {
   const map: Record<string, string> = {
-    critique: "bg-red-500/10 text-red-400 border border-red-500/20",
     haute: "bg-orange-500/10 text-orange-400 border border-orange-500/20",
     moyenne: "bg-amber-500/10 text-amber-400 border border-amber-500/20",
     basse: "bg-blue-500/10 text-blue-400 border border-blue-500/20",
   };
-  const labels: Record<string, string> = { critique: "Critique", haute: "Haute", moyenne: "Moyenne", basse: "Basse" };
+  const labels: Record<string, string> = { haute: "Haute", moyenne: "Moyenne", basse: "Basse" };
   return (
-    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${map[priority]}`}>
-      {labels[priority]}
+    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${map[priority] || map.basse}`}>
+      {labels[priority] || priority}
     </span>
   );
 }
 
+const ALERT_TYPE_LABEL: Record<string, string> = {
+  nouveau_produit: "Nouveau produit",
+  changement_prix: "Tarification",
+  nouvelle_fonctionnalite: "Nouvelle fonctionnalité",
+  nouvelle_offre_emploi: "Recrutement",
+  levee_de_fonds: "Financement",
+  autre: "Autre",
+};
+
 function Avatar({ name, color, size = "sm" }: { name: string; color: string; size?: "sm" | "md" | "lg" }) {
   const sizes = { sm: "w-7 h-7 text-xs", md: "w-9 h-9 text-sm", lg: "w-14 h-14 text-lg" };
-  const initials = name.slice(0, 2).toUpperCase();
   return (
     <div className={`${sizes[size]} rounded-lg flex items-center justify-center font-semibold shrink-0`} style={{ backgroundColor: color + "22", color }}>
-      {initials}
+      {initialsFor(name)}
     </div>
   );
 }
@@ -146,22 +75,22 @@ function Avatar({ name, color, size = "sm" }: { name: string; color: string; siz
 function ProgressBar({ value, color = "#6366f1" }: { value: number; color?: string }) {
   return (
     <div className="w-full h-1.5 rounded-full bg-white/5 overflow-hidden">
-      <div className="h-full rounded-full transition-all duration-700" style={{ width: `${value}%`, backgroundColor: color }} />
+      <div className="h-full rounded-full transition-all duration-700" style={{ width: `${Math.max(0, Math.min(100, value))}%`, backgroundColor: color }} />
     </div>
   );
 }
 
-function Card({ children, className = "" }: { children: React.ReactNode; className?: string }) {
+function Card({ children, className = "", onClick }: { children: React.ReactNode; className?: string; onClick?: () => void }) {
   return (
-    <div className={`bg-[#111119] border border-white/7 rounded-[14px] ${className}`}>
+    <div className={`bg-[#111119] border border-white/7 rounded-[14px] ${className}`} onClick={onClick}>
       {children}
     </div>
   );
 }
 
-function Btn({ children, variant = "primary", onClick, className = "", icon }: {
+function Btn({ children, variant = "primary", onClick, className = "", icon, disabled }: {
   children: React.ReactNode; variant?: "primary" | "secondary" | "ghost" | "danger";
-  onClick?: () => void; className?: string; icon?: React.ReactNode;
+  onClick?: () => void; className?: string; icon?: React.ReactNode; disabled?: boolean;
 }) {
   const variants = {
     primary: "bg-[#6366f1] hover:bg-[#5254cc] text-white",
@@ -170,46 +99,55 @@ function Btn({ children, variant = "primary", onClick, className = "", icon }: {
     danger: "bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20",
   };
   return (
-    <button onClick={onClick} className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-150 ${variants[variant]} ${className}`}>
+    <button onClick={onClick} disabled={disabled} className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-150 disabled:opacity-40 disabled:cursor-not-allowed ${variants[variant]} ${className}`}>
       {icon && icon}
       {children}
     </button>
   );
 }
 
+function Loading({ label = "Chargement…" }: { label?: string }) {
+  return (
+    <div className="flex items-center gap-2 text-[#7878a0] text-sm py-8 justify-center">
+      <Loader2 className="w-4 h-4 animate-spin" /> {label}
+    </div>
+  );
+}
+
+function EmptyState({ label }: { label: string }) {
+  return <div className="text-[#7878a0] text-sm py-8 text-center">{label}</div>;
+}
+
 // ─── SIDEBAR ─────────────────────────────────────────────────────────────────
 
 const navItems = [
   { id: "dashboard", label: "Tableau de bord", icon: LayoutDashboard },
-  { id: "competitors", label: "Concurrents", icon: Users, badge: 12 },
-  { id: "sources", label: "Sources", icon: Globe, badge: 1284 },
-  { id: "reports", label: "Rapports IA", icon: FileText, badge: 8 },
+  { id: "competitors", label: "Concurrents", icon: Users },
+  { id: "sources", label: "Sources", icon: Globe },
+  { id: "reports", label: "Rapports IA", icon: FileText },
   { id: "agents", label: "Agents IA", icon: Bot },
   { id: "history", label: "Historique", icon: Clock },
-  { id: "alerts", label: "Alertes", icon: Bell, badge: 3, badgeDanger: true },
+  { id: "alerts", label: "Alertes", icon: Bell },
   { id: "settings", label: "Paramètres", icon: Settings },
   { id: "profile", label: "Profil", icon: User },
 ];
 
-function Sidebar({ page, setPage }: { page: string; setPage: (p: string) => void }) {
+function Sidebar({ page, setPage, profile, onLogout }: { page: string; setPage: (p: string) => void; profile: any; onLogout: () => void }) {
+  const displayName = profile?.full_name || profile?.email || "Utilisateur";
   return (
     <aside className="w-56 shrink-0 flex flex-col h-full bg-[#0d0d16] border-r border-white/5">
-      {/* Logo */}
       <div className="px-4 pt-5 pb-4 flex items-center gap-2.5">
         <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#6366f1] to-[#8b5cf6] flex items-center justify-center shrink-0">
           <Activity className="w-4 h-4 text-white" />
         </div>
         <div>
-          <div className="text-[#e2e2f0] font-semibold text-sm leading-none">LOeilDuLord</div>
-          <div className="text-[10px] text-[#7878a0] mt-0.5 font-mono">v2.4.1</div>
+          <div className="text-[#e2e2f0] font-semibold text-sm leading-none">Radar</div>
+          <div className="text-[10px] text-[#7878a0] mt-0.5 font-mono">veille concurrentielle</div>
         </div>
       </div>
 
-      <div className="px-2 mb-1">
-        <div className="h-px bg-white/5" />
-      </div>
+      <div className="px-2 mb-1"><div className="h-px bg-white/5" /></div>
 
-      {/* Nav */}
       <nav className="flex-1 px-2 py-2 space-y-0.5 overflow-y-auto">
         {navItems.map((item) => {
           const Icon = item.icon;
@@ -221,30 +159,22 @@ function Sidebar({ page, setPage }: { page: string; setPage: (p: string) => void
                 <Icon className={`w-4 h-4 ${active ? "text-[#6366f1]" : "text-[#5858a0] group-hover:text-[#7878a0]"}`} />
                 <span className="font-medium">{item.label}</span>
               </div>
-              {item.badge && (
-                <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded-md ${item.badgeDanger ? "bg-red-500/20 text-red-400" : "bg-white/8 text-[#7878a0]"}`}>
-                  {item.badge}
-                </span>
-              )}
             </button>
           );
         })}
       </nav>
 
-      <div className="px-2 mb-2">
-        <div className="h-px bg-white/5" />
-      </div>
+      <div className="px-2 mb-2"><div className="h-px bg-white/5" /></div>
 
-      {/* User */}
       <div className="px-2 pb-4">
-        <div className="flex items-center gap-2.5 px-2.5 py-2 rounded-lg hover:bg-white/5 cursor-pointer group">
-          <div className="w-7 h-7 rounded-full bg-gradient-to-br from-[#6366f1] to-[#22d3ee] flex items-center justify-center text-[11px] font-bold text-white shrink-0">AM</div>
+        <button onClick={onLogout} className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg hover:bg-white/5 cursor-pointer group text-left">
+          <Avatar name={displayName} color="#6366f1" />
           <div className="flex-1 min-w-0">
-            <div className="text-[#e2e2f0] text-xs font-medium truncate">Alexandre Martin</div>
-            <div className="text-[#7878a0] text-[10px] truncate">Pro · 8 jours restants</div>
+            <div className="text-[#e2e2f0] text-xs font-medium truncate">{displayName}</div>
+            <div className="text-[#7878a0] text-[10px] truncate">{profile?.plan === "pro" ? "Pro" : "Free"}</div>
           </div>
           <LogOut className="w-3.5 h-3.5 text-[#5858a0] group-hover:text-[#7878a0]" />
-        </div>
+        </button>
       </div>
     </aside>
   );
@@ -252,76 +182,80 @@ function Sidebar({ page, setPage }: { page: string; setPage: (p: string) => void
 
 // ─── TOP BAR ─────────────────────────────────────────────────────────────────
 
-function TopBar({ title, subtitle, actions }: { title: string; subtitle?: string; actions?: React.ReactNode }) {
+function TopBar({ title, subtitle }: { title: string; subtitle?: string }) {
   return (
     <header className="h-14 shrink-0 flex items-center justify-between px-6 border-b border-white/5 bg-[#09090f]/80 backdrop-blur-sm">
       <div>
         <h1 className="text-[#e2e2f0] font-semibold text-sm">{title}</h1>
         {subtitle && <p className="text-[#7878a0] text-xs">{subtitle}</p>}
       </div>
-      <div className="flex items-center gap-2">
-        {actions}
-        <div className="relative">
-          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#5858a0]" />
-          <input placeholder="Rechercher…" className="bg-white/5 border border-white/8 rounded-lg pl-8 pr-3 py-1.5 text-xs text-[#c4c4d8] placeholder:text-[#5858a0] focus:outline-none focus:border-[#6366f1]/50 w-44 transition-all" />
-        </div>
-        <button className="relative w-8 h-8 flex items-center justify-center rounded-lg hover:bg-white/5 text-[#7878a0] transition-all">
-          <Bell className="w-4 h-4" />
-          <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-red-500" />
-        </button>
-        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#6366f1] to-[#22d3ee] flex items-center justify-center text-[11px] font-bold text-white cursor-pointer">AM</div>
-      </div>
     </header>
   );
 }
 
-// ─── LOGIN PAGE ──────────────────────────────────────────────────────────────
+// ─── LOGIN / SIGNUP (Supabase Auth réel) ────────────────────────────────────
 
-function LoginPage({ onLogin }: { onLogin: () => void }) {
+function LoginPage() {
   const [mode, setMode] = useState<"login" | "register">("login");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [fullName, setFullName] = useState("");
   const [showPw, setShowPw] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [info, setInfo] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    setError(null);
+    setInfo(null);
+    setLoading(true);
+    if (mode === "login") {
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) setError(error.message);
+    } else {
+      const { error } = await supabase.auth.signUp({
+        email, password,
+        options: { data: { full_name: fullName } },
+      });
+      if (error) setError(error.message);
+      else setInfo("Compte créé. Si la confirmation par email est activée dans Supabase, vérifie ta boîte mail avant de te connecter.");
+    }
+    setLoading(false);
+  }
+
+  async function oauth(provider: "github" | "google") {
+    await supabase.auth.signInWithOAuth({ provider, options: { redirectTo: window.location.origin } });
+  }
 
   return (
     <div className="min-h-screen flex bg-[#09090f] text-[#e2e2f0]">
-      {/* Left panel */}
       <div className="hidden lg:flex w-[52%] relative flex-col justify-between p-12 overflow-hidden bg-[#0d0d16]">
         <div className="absolute inset-0 overflow-hidden">
           <div className="absolute top-0 left-0 w-[600px] h-[600px] rounded-full blur-[120px] opacity-20" style={{ background: "radial-gradient(circle, #6366f1, transparent 70%)" }} />
           <div className="absolute bottom-0 right-0 w-[500px] h-[500px] rounded-full blur-[120px] opacity-15" style={{ background: "radial-gradient(circle, #22d3ee, transparent 70%)" }} />
-          <svg className="absolute inset-0 w-full h-full opacity-[0.04]" xmlns="http://www.w3.org/2000/svg">
-            <defs>
-              <pattern id="grid" width="32" height="32" patternUnits="userSpaceOnUse">
-                <path d="M 32 0 L 0 0 0 32" fill="none" stroke="white" strokeWidth="0.5"/>
-              </pattern>
-            </defs>
-            <rect width="100%" height="100%" fill="url(#grid)" />
-          </svg>
         </div>
 
         <div className="relative z-10 flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#6366f1] to-[#8b5cf6] flex items-center justify-center">
             <Activity className="w-5 h-5 text-white" />
           </div>
-          <span className="text-[#e2e2f0] font-bold text-xl">LOeilDuLord</span>
+          <span className="text-[#e2e2f0] font-bold text-xl">Radar</span>
         </div>
 
         <div className="relative z-10">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#6366f1]/10 border border-[#6366f1]/20 text-[#a5b4fc] text-xs font-medium mb-6">
-            <span className="w-1.5 h-1.5 rounded-full bg-[#6366f1] animate-pulse" />
-            7 agents IA actifs · 1 284 sources surveillées
-          </div>
           <h2 className="text-4xl font-bold text-[#e2e2f0] leading-tight mb-4">
             Votre veille<br />
             <span className="bg-gradient-to-r from-[#6366f1] to-[#22d3ee] bg-clip-text text-transparent">concurrentielle</span><br />
             automatisée
           </h2>
           <p className="text-[#7878a0] text-base leading-relaxed mb-10 max-w-sm">
-            Une architecture multi-agents surveille vos concurrents 24h/24, analyse les sources et génère des rapports stratégiques en français.
+            Une architecture multi-agents surveille vos concurrents, analyse les sources et génère des rapports stratégiques en français.
           </p>
           <div className="space-y-4">
             {[
               { icon: Bot, label: "7 agents IA spécialisés", sub: "Recherche · Scraping · Vérification · Analyse · Rédaction" },
-              { icon: Globe, label: "1 284 sources surveillées", sub: "Sites web · GitHub · LinkedIn · RSS · Actualités · Offres d'emploi" },
+              { icon: Globe, label: "Sources multi-canal", sub: "Sites web · GitHub · LinkedIn · RSS · Actualités · Offres d'emploi" },
               { icon: FileText, label: "Rapports générés automatiquement", sub: "Synthèses en français avec score de confiance et sources citées" },
             ].map((f) => (
               <div key={f.label} className="flex items-start gap-3">
@@ -337,36 +271,22 @@ function LoginPage({ onLogin }: { onLogin: () => void }) {
           </div>
         </div>
 
-        <div className="relative z-10 flex items-center gap-4 text-[#5858a0] text-xs">
-          <span>© 2026 LOeilDuLord</span>
-          <span>·</span>
-          <span className="hover:text-[#7878a0] cursor-pointer">Confidentialité</span>
-          <span>·</span>
-          <span className="hover:text-[#7878a0] cursor-pointer">Conditions</span>
-        </div>
+        <div className="relative z-10 text-[#5858a0] text-xs">© 2026 Radar</div>
       </div>
 
-      {/* Right panel */}
       <div className="flex-1 flex items-center justify-center p-8">
         <div className="w-full max-w-sm">
           <div className="mb-8">
-            <h2 className="text-2xl font-bold text-[#e2e2f0] mb-1">
-              {mode === "login" ? "Bon retour 👋" : "Créer un compte"}
-            </h2>
-            <p className="text-[#7878a0] text-sm">
-              {mode === "login" ? "Connectez-vous à votre espace LOeilDuLord" : "Commencez votre période d'essai gratuit de 14 jours"}
-            </p>
+            <h2 className="text-2xl font-bold text-[#e2e2f0] mb-1">{mode === "login" ? "Bon retour" : "Créer un compte"}</h2>
+            <p className="text-[#7878a0] text-sm">{mode === "login" ? "Connecte-toi à ton espace Radar" : "Crée ton compte pour commencer"}</p>
           </div>
 
-          {/* Social */}
           <div className="flex gap-3 mb-6">
-            <button className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition-all text-sm text-[#c4c4d8] font-medium">
-              <Github className="w-4 h-4" />
-              GitHub
+            <button onClick={() => oauth("github")} className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition-all text-sm text-[#c4c4d8] font-medium">
+              <Github className="w-4 h-4" /> GitHub
             </button>
-            <button className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition-all text-sm text-[#c4c4d8] font-medium">
-              <Globe2 className="w-4 h-4" />
-              Google
+            <button onClick={() => oauth("google")} className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition-all text-sm text-[#c4c4d8] font-medium">
+              <Globe2 className="w-4 h-4" /> Google
             </button>
           </div>
 
@@ -376,34 +296,34 @@ function LoginPage({ onLogin }: { onLogin: () => void }) {
             <div className="flex-1 h-px bg-white/8" />
           </div>
 
-          <div className="space-y-4">
+          <form onSubmit={submit} className="space-y-4">
             {mode === "register" && (
               <div>
                 <label className="block text-xs font-medium text-[#c4c4d8] mb-1.5">Nom complet</label>
-                <input type="text" placeholder="Alexandre Martin" className="w-full bg-[#1c1c2e] border border-white/10 rounded-xl px-3.5 py-2.5 text-sm text-[#e2e2f0] placeholder:text-[#5858a0] focus:outline-none focus:border-[#6366f1]/60 transition-all" />
+                <input value={fullName} onChange={(e) => setFullName(e.target.value)} type="text" placeholder="Alexandre Martin" className="w-full bg-[#1c1c2e] border border-white/10 rounded-xl px-3.5 py-2.5 text-sm text-[#e2e2f0] placeholder:text-[#5858a0] focus:outline-none focus:border-[#6366f1]/60 transition-all" />
               </div>
             )}
             <div>
               <label className="block text-xs font-medium text-[#c4c4d8] mb-1.5">Adresse email</label>
-              <input type="email" placeholder="vous@example.com" className="w-full bg-[#1c1c2e] border border-white/10 rounded-xl px-3.5 py-2.5 text-sm text-[#e2e2f0] placeholder:text-[#5858a0] focus:outline-none focus:border-[#6366f1]/60 transition-all" />
+              <input required value={email} onChange={(e) => setEmail(e.target.value)} type="email" placeholder="vous@example.com" className="w-full bg-[#1c1c2e] border border-white/10 rounded-xl px-3.5 py-2.5 text-sm text-[#e2e2f0] placeholder:text-[#5858a0] focus:outline-none focus:border-[#6366f1]/60 transition-all" />
             </div>
             <div>
-              <div className="flex items-center justify-between mb-1.5">
-                <label className="text-xs font-medium text-[#c4c4d8]">Mot de passe</label>
-                {mode === "login" && <span className="text-xs text-[#6366f1] hover:text-[#a5b4fc] cursor-pointer">Mot de passe oublié ?</span>}
-              </div>
+              <label className="block text-xs font-medium text-[#c4c4d8] mb-1.5">Mot de passe</label>
               <div className="relative">
-                <input type={showPw ? "text" : "password"} placeholder="••••••••" className="w-full bg-[#1c1c2e] border border-white/10 rounded-xl px-3.5 py-2.5 pr-10 text-sm text-[#e2e2f0] placeholder:text-[#5858a0] focus:outline-none focus:border-[#6366f1]/60 transition-all" />
-                <button onClick={() => setShowPw(!showPw)} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#5858a0] hover:text-[#7878a0]">
+                <input required minLength={6} value={password} onChange={(e) => setPassword(e.target.value)} type={showPw ? "text" : "password"} placeholder="••••••••" className="w-full bg-[#1c1c2e] border border-white/10 rounded-xl px-3.5 py-2.5 pr-10 text-sm text-[#e2e2f0] placeholder:text-[#5858a0] focus:outline-none focus:border-[#6366f1]/60 transition-all" />
+                <button type="button" onClick={() => setShowPw(!showPw)} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#5858a0] hover:text-[#7878a0]">
                   {showPw ? <EyeOff className="w-4 h-4" /> : <EyeIcon className="w-4 h-4" />}
                 </button>
               </div>
             </div>
 
-            <button onClick={onLogin} className="w-full py-2.5 bg-gradient-to-r from-[#6366f1] to-[#8b5cf6] hover:from-[#5254cc] hover:to-[#7c3aed] text-white font-semibold rounded-xl transition-all text-sm mt-2">
-              {mode === "login" ? "Se connecter" : "Créer mon compte"}
+            {error && <div className="text-xs text-red-400">{error}</div>}
+            {info && <div className="text-xs text-emerald-400">{info}</div>}
+
+            <button type="submit" disabled={loading} className="w-full py-2.5 bg-gradient-to-r from-[#6366f1] to-[#8b5cf6] hover:from-[#5254cc] hover:to-[#7c3aed] text-white font-semibold rounded-xl transition-all text-sm mt-2 disabled:opacity-50">
+              {loading ? "…" : mode === "login" ? "Se connecter" : "Créer mon compte"}
             </button>
-          </div>
+          </form>
 
           <p className="text-center text-sm text-[#7878a0] mt-6">
             {mode === "login" ? "Pas encore de compte ? " : "Vous avez déjà un compte ? "}
@@ -417,7 +337,7 @@ function LoginPage({ onLogin }: { onLogin: () => void }) {
   );
 }
 
-// ─── DASHBOARD PAGE ───────────────────────────────────────────────────────────
+// ─── DASHBOARD ────────────────────────────────────────────────────────────────
 
 const CustomTooltip = ({ active, payload, label }: any) => {
   if (!active || !payload?.length) return null;
@@ -434,49 +354,106 @@ const CustomTooltip = ({ active, payload, label }: any) => {
   );
 };
 
-function StatCard({ title, value, change, icon: Icon, accent, trend }: {
-  title: string; value: string; change: string; icon: any; accent: string; trend: "up" | "down" | "neutral";
-}) {
+function StatCard({ title, value, sub, icon: Icon, accent }: { title: string; value: string; sub: string; icon: any; accent: string }) {
   return (
     <Card className="p-5 flex flex-col gap-4">
-      <div className="flex items-start justify-between">
-        <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ backgroundColor: accent + "15" }}>
-          <Icon className="w-4.5 h-4.5" style={{ color: accent }} />
-        </div>
-        <div className={`flex items-center gap-1 text-xs font-medium ${trend === "up" ? "text-emerald-400" : trend === "down" ? "text-red-400" : "text-[#7878a0]"}`}>
-          {trend === "up" ? <ArrowUpRight className="w-3.5 h-3.5" /> : trend === "down" ? <TrendingDown className="w-3.5 h-3.5" /> : null}
-          {change}
-        </div>
+      <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ backgroundColor: accent + "15" }}>
+        <Icon className="w-4.5 h-4.5" style={{ color: accent }} />
       </div>
       <div>
         <div className="text-2xl font-bold text-[#e2e2f0] font-mono leading-none mb-1">{value}</div>
         <div className="text-[#7878a0] text-xs">{title}</div>
+        <div className="text-[#5858a0] text-[10px] mt-1">{sub}</div>
       </div>
     </Card>
   );
 }
 
 function DashboardPage({ setPage }: { setPage: (p: string) => void }) {
-  const recentAlerts = alertsData.slice(0, 3);
+  const [loading, setLoading] = useState(true);
+  const [stats, setStats] = useState({ competitors: 0, sources: 0, reportsWeek: 0, alertsWeek: 0, agentsActiveToday: 0 });
+  const [activity, setActivity] = useState<{ day: string; analyses: number; alertes: number }[]>([]);
+  const [recentAlerts, setRecentAlerts] = useState<any[]>([]);
+  const [activeCompetitors, setActiveCompetitors] = useState<any[]>([]);
+  const [agentSnapshot, setAgentSnapshot] = useState<any[]>([]);
+
+  useEffect(() => { load(); }, []);
+
+  async function load() {
+    setLoading(true);
+    const since = new Date(); since.setDate(since.getDate() - 6); since.setHours(0, 0, 0, 0);
+    const startToday = new Date(); startToday.setHours(0, 0, 0, 0);
+
+    const [
+      { count: competitorsCount },
+      { count: sourcesCount },
+      { data: alertsWeek },
+      { data: reportsWeek },
+      { data: runsWeek },
+      { data: recentAlertsData },
+      { data: competitorsData },
+    ] = await Promise.all([
+      supabase.from("competitors").select("id", { count: "exact", head: true }),
+      supabase.from("sources").select("id", { count: "exact", head: true }),
+      supabase.from("alerts").select("id, created_at").gte("created_at", since.toISOString()),
+      supabase.from("reports").select("id, generated_at").gte("generated_at", since.toISOString()),
+      supabase.from("agent_runs").select("id, started_at, agent_name, status").gte("started_at", since.toISOString()),
+      supabase.from("alerts").select("*, competitors(name)").order("created_at", { ascending: false }).limit(3),
+      supabase.from("competitors").select("*, sources(last_analyzed_at)").eq("status", "actif").limit(5),
+    ]);
+
+    const days = [...Array(7)].map((_, i) => { const d = new Date(); d.setDate(d.getDate() - (6 - i)); return d; });
+    const dayLabel = (d: Date) => new Intl.DateTimeFormat("fr-FR", { weekday: "short" }).format(d).replace(".", "");
+    setActivity(days.map((d) => {
+      const key = d.toDateString();
+      return {
+        day: dayLabel(d),
+        analyses: (runsWeek || []).filter((r: any) => new Date(r.started_at).toDateString() === key).length,
+        alertes: (alertsWeek || []).filter((a: any) => new Date(a.created_at).toDateString() === key).length,
+      };
+    }));
+
+    const todaysRuns = (runsWeek || []).filter((r: any) => new Date(r.started_at) >= startToday);
+    const agentsActiveToday = new Set(todaysRuns.map((r: any) => r.agent_name)).size;
+
+    setStats({
+      competitors: competitorsCount || 0,
+      sources: sourcesCount || 0,
+      reportsWeek: (reportsWeek || []).length,
+      alertsWeek: (alertsWeek || []).length,
+      agentsActiveToday,
+    });
+    setRecentAlerts(recentAlertsData || []);
+    setActiveCompetitors((competitorsData || []).map((c: any) => ({
+      ...c,
+      lastScan: c.sources?.length ? c.sources.map((s: any) => s.last_analyzed_at).filter(Boolean).sort().reverse()[0] : null,
+    })));
+    setAgentSnapshot(AGENT_ORDER.map((name) => {
+      const runsForAgent = (runsWeek || []).filter((r: any) => r.agent_name === name);
+      const latest = runsForAgent.sort((a: any, b: any) => new Date(b.started_at).getTime() - new Date(a.started_at).getTime())[0];
+      return { name, status: agentStatusLabel(latest?.status), progress: latest?.status === "running" ? 50 : 0 };
+    }));
+    setLoading(false);
+  }
+
+  if (loading) return <Loading />;
 
   return (
     <div className="space-y-6">
-      {/* Stat cards */}
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
-        <StatCard title="Concurrents surveillés" value="12" change="+2 ce mois" icon={Users} accent="#6366f1" trend="up" />
-        <StatCard title="Nouvelles détectées" value="47" change="+18% vs hier" icon={Bell} accent="#8b5cf6" trend="up" />
-        <StatCard title="Rapports générés" value="8" change="cette semaine" icon={FileText} accent="#22d3ee" trend="neutral" />
-        <StatCard title="Sources analysées" value="1 284" change="+56 aujourd'hui" icon={Globe} accent="#f59e0b" trend="up" />
-        <StatCard title="Agents actifs" value="4/7" change="3 en attente" icon={Bot} accent="#10b981" trend="neutral" />
+        <StatCard title="Concurrents surveillés" value={String(stats.competitors)} sub="au total" icon={Users} accent="#6366f1" />
+        <StatCard title="Alertes" value={String(stats.alertsWeek)} sub="7 derniers jours" icon={Bell} accent="#8b5cf6" />
+        <StatCard title="Rapports générés" value={String(stats.reportsWeek)} sub="7 derniers jours" icon={FileText} accent="#22d3ee" />
+        <StatCard title="Sources surveillées" value={String(stats.sources)} sub="au total" icon={Globe} accent="#f59e0b" />
+        <StatCard title="Agents actifs" value={`${stats.agentsActiveToday}/7`} sub="aujourd'hui" icon={Bot} accent="#10b981" />
       </div>
 
-      {/* Chart + Agents */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <Card className="lg:col-span-2 p-5">
           <div className="flex items-center justify-between mb-5">
             <div>
               <h3 className="text-[#e2e2f0] font-semibold text-sm">Activité de la semaine</h3>
-              <p className="text-[#7878a0] text-xs mt-0.5">Analyses · Alertes · Rapports</p>
+              <p className="text-[#7878a0] text-xs mt-0.5">Exécutions d'agents · Alertes</p>
             </div>
             <div className="flex items-center gap-4 text-xs text-[#7878a0]">
               <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-sm bg-[#6366f1]" />Analyses</span>
@@ -484,7 +461,7 @@ function DashboardPage({ setPage }: { setPage: (p: string) => void }) {
             </div>
           </div>
           <ResponsiveContainer width="100%" height={200}>
-            <AreaChart data={activityData} margin={{ top: 5, right: 0, left: -20, bottom: 0 }}>
+            <AreaChart data={activity} margin={{ top: 5, right: 0, left: -20, bottom: 0 }}>
               <defs>
                 <linearGradient id="ga" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="5%" stopColor="#6366f1" stopOpacity={0.3} />
@@ -505,50 +482,53 @@ function DashboardPage({ setPage }: { setPage: (p: string) => void }) {
           </ResponsiveContainer>
         </Card>
 
-        {/* Agent status */}
         <Card className="p-5">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-[#e2e2f0] font-semibold text-sm">Agents IA</h3>
             <button onClick={() => setPage("agents")} className="text-xs text-[#6366f1] hover:text-[#a5b4fc] flex items-center gap-1">Voir tout <ChevronRight className="w-3 h-3" /></button>
           </div>
           <div className="space-y-3">
-            {agents.map((a) => (
-              <div key={a.id} className="flex items-center gap-3">
-                <div className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0" style={{ backgroundColor: a.color + "15" }}>
-                  <a.icon className="w-3.5 h-3.5" style={{ color: a.color }} />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-[#c4c4d8] text-xs font-medium truncate">{a.name}</span>
-                    <StatusBadge status={a.status} />
+            {agentSnapshot.map((a) => {
+              const meta = AGENT_META[a.name as AgentName];
+              return (
+                <div key={a.name} className="flex items-center gap-3">
+                  <div className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0" style={{ backgroundColor: meta.color + "15" }}>
+                    <meta.icon className="w-3.5 h-3.5" style={{ color: meta.color }} />
                   </div>
-                  {a.progress > 0 && <ProgressBar value={a.progress} color={a.color} />}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-[#c4c4d8] text-xs font-medium truncate">{meta.name}</span>
+                      <StatusBadge status={a.status} />
+                    </div>
+                    {a.progress > 0 && <ProgressBar value={a.progress} color={meta.color} />}
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </Card>
       </div>
 
-      {/* Recent alerts + recent competitors */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <Card className="p-5">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-[#e2e2f0] font-semibold text-sm">Dernières alertes</h3>
             <button onClick={() => setPage("alerts")} className="text-xs text-[#6366f1] hover:text-[#a5b4fc] flex items-center gap-1">Voir tout <ChevronRight className="w-3 h-3" /></button>
           </div>
-          <div className="space-y-3">
-            {recentAlerts.map((a) => (
-              <div key={a.id} className="flex items-start gap-3 p-3 rounded-xl bg-white/3 border border-white/5 hover:bg-white/5 transition-all cursor-pointer">
-                <PriorityBadge priority={a.priority} />
-                <div className="flex-1 min-w-0">
-                  <div className="text-[#c4c4d8] text-xs font-medium leading-snug mb-0.5">{a.title}</div>
-                  <div className="text-[#7878a0] text-[11px]">{a.competitor} · {a.date}</div>
+          {recentAlerts.length === 0 ? <EmptyState label="Aucune alerte pour l'instant." /> : (
+            <div className="space-y-3">
+              {recentAlerts.map((a) => (
+                <div key={a.id} className="flex items-start gap-3 p-3 rounded-xl bg-white/3 border border-white/5 hover:bg-white/5 transition-all cursor-pointer">
+                  <PriorityBadge priority={a.priority} />
+                  <div className="flex-1 min-w-0">
+                    <div className="text-[#c4c4d8] text-xs font-medium leading-snug mb-0.5">{a.title}</div>
+                    <div className="text-[#7878a0] text-[11px]">{a.competitors?.name} · {timeAgo(a.created_at)}</div>
+                  </div>
+                  {!a.read && <span className="w-2 h-2 rounded-full bg-[#6366f1] shrink-0 mt-1" />}
                 </div>
-                {!a.read && <span className="w-2 h-2 rounded-full bg-[#6366f1] shrink-0 mt-1" />}
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </Card>
 
         <Card className="p-5">
@@ -556,243 +536,412 @@ function DashboardPage({ setPage }: { setPage: (p: string) => void }) {
             <h3 className="text-[#e2e2f0] font-semibold text-sm">Concurrents actifs</h3>
             <button onClick={() => setPage("competitors")} className="text-xs text-[#6366f1] hover:text-[#a5b4fc] flex items-center gap-1">Voir tout <ChevronRight className="w-3 h-3" /></button>
           </div>
-          <div className="space-y-2.5">
-            {competitors.filter(c => c.status === "actif").slice(0, 5).map((c) => (
-              <div key={c.id} className="flex items-center gap-3 p-2.5 rounded-xl hover:bg-white/5 transition-all cursor-pointer">
-                <Avatar name={c.name} color={c.color} />
-                <div className="flex-1 min-w-0">
-                  <div className="text-[#c4c4d8] text-xs font-medium">{c.name}</div>
-                  <div className="text-[#7878a0] text-[11px]">{c.lastScan}</div>
+          {activeCompetitors.length === 0 ? <EmptyState label="Aucun concurrent configuré." /> : (
+            <div className="space-y-2.5">
+              {activeCompetitors.map((c) => (
+                <div key={c.id} className="flex items-center gap-3 p-2.5 rounded-xl hover:bg-white/5 transition-all cursor-pointer">
+                  <Avatar name={c.name} color={colorFor(c.name)} />
+                  <div className="flex-1 min-w-0">
+                    <div className="text-[#c4c4d8] text-xs font-medium">{c.name}</div>
+                    <div className="text-[#7878a0] text-[11px]">{timeAgo(c.lastScan)}</div>
+                  </div>
                 </div>
-                {c.changes > 0 && (
-                  <span className="text-[10px] bg-[#6366f1]/15 text-[#a5b4fc] px-2 py-0.5 rounded-full font-mono">{c.changes} modif.</span>
-                )}
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </Card>
       </div>
     </div>
   );
 }
 
-// ─── COMPETITORS PAGE ─────────────────────────────────────────────────────────
+// ─── CONCURRENTS ──────────────────────────────────────────────────────────────
+
+const EMPTY_COMPETITOR = { name: "", sector: "", website: "", monitoring_frequency: "quotidien" };
 
 function CompetitorsPage() {
+  const [loading, setLoading] = useState(true);
+  const [competitors, setCompetitors] = useState<any[]>([]);
   const [search, setSearch] = useState("");
-  const filtered = competitors.filter(c => c.name.toLowerCase().includes(search.toLowerCase()) || c.sector.toLowerCase().includes(search.toLowerCase()));
+  const [showForm, setShowForm] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [form, setForm] = useState<any>(EMPTY_COMPETITOR);
+
+  useEffect(() => { load(); }, []);
+
+  async function load() {
+    setLoading(true);
+    const { data } = await supabase
+      .from("competitors")
+      .select("*, sources(last_analyzed_at), alerts(id, read)")
+      .order("name");
+    setCompetitors((data || []).map((c: any) => ({
+      ...c,
+      lastScan: c.sources?.length ? c.sources.map((s: any) => s.last_analyzed_at).filter(Boolean).sort().reverse()[0] : null,
+      unreadAlerts: (c.alerts || []).filter((a: any) => !a.read).length,
+    })));
+    setLoading(false);
+  }
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    if (editingId) {
+      await supabase.from("competitors").update(form).eq("id", editingId);
+    } else {
+      await supabase.from("competitors").insert({ ...form, user_id: user.id });
+    }
+    setForm(EMPTY_COMPETITOR);
+    setEditingId(null);
+    setShowForm(false);
+    load();
+  }
+
+  function edit(c: any) {
+    setForm({ name: c.name, sector: c.sector || "", website: c.website || "", monitoring_frequency: c.monitoring_frequency });
+    setEditingId(c.id);
+    setShowForm(true);
+  }
+
+  async function remove(id: string) {
+    if (!confirm("Supprimer ce concurrent et toutes ses sources ?")) return;
+    await supabase.from("competitors").delete().eq("id", id);
+    load();
+  }
+
+  async function toggleStatus(c: any) {
+    await supabase.from("competitors").update({ status: c.status === "actif" ? "pause" : "actif" }).eq("id", c.id);
+    load();
+  }
+
+  const filtered = competitors.filter((c) => c.name.toLowerCase().includes(search.toLowerCase()));
 
   return (
     <div className="space-y-5">
       <div className="flex items-center gap-3">
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#5858a0]" />
-          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Rechercher un concurrent…" className="w-full bg-[#111119] border border-white/8 rounded-xl pl-9 pr-3 py-2 text-sm text-[#c4c4d8] placeholder:text-[#5858a0] focus:outline-none focus:border-[#6366f1]/50 transition-all" />
+          <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Rechercher un concurrent…" className="w-full bg-[#111119] border border-white/8 rounded-xl pl-9 pr-3 py-2 text-sm text-[#c4c4d8] placeholder:text-[#5858a0] focus:outline-none focus:border-[#6366f1]/50 transition-all" />
         </div>
-        <Btn icon={<Filter className="w-3.5 h-3.5" />} variant="secondary">Filtres</Btn>
-        <Btn icon={<Plus className="w-3.5 h-3.5" />} variant="primary">Ajouter</Btn>
+        <Btn icon={<Plus className="w-3.5 h-3.5" />} variant="primary" onClick={() => { setForm(EMPTY_COMPETITOR); setEditingId(null); setShowForm(!showForm); }}>
+          {showForm ? "Fermer" : "Ajouter"}
+        </Btn>
       </div>
+
+      {showForm && (
+        <Card className="p-5">
+          <form onSubmit={submit} className="grid grid-cols-2 gap-4">
+            <label className="text-xs text-[#7878a0] flex flex-col gap-1.5">Nom
+              <input required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className="bg-[#1c1c2e] border border-white/10 rounded-lg px-3 py-2 text-sm text-[#e2e2f0]" />
+            </label>
+            <label className="text-xs text-[#7878a0] flex flex-col gap-1.5">Secteur
+              <input value={form.sector} onChange={(e) => setForm({ ...form, sector: e.target.value })} className="bg-[#1c1c2e] border border-white/10 rounded-lg px-3 py-2 text-sm text-[#e2e2f0]" />
+            </label>
+            <label className="text-xs text-[#7878a0] flex flex-col gap-1.5">Site web
+              <input value={form.website} onChange={(e) => setForm({ ...form, website: e.target.value })} placeholder="https://…" className="bg-[#1c1c2e] border border-white/10 rounded-lg px-3 py-2 text-sm text-[#e2e2f0]" />
+            </label>
+            <label className="text-xs text-[#7878a0] flex flex-col gap-1.5">Fréquence de surveillance
+              <select value={form.monitoring_frequency} onChange={(e) => setForm({ ...form, monitoring_frequency: e.target.value })} className="bg-[#1c1c2e] border border-white/10 rounded-lg px-3 py-2 text-sm text-[#e2e2f0]">
+                <option value="horaire">Toutes les heures</option>
+                <option value="quotidien">Quotidien</option>
+                <option value="hebdomadaire">Hebdomadaire</option>
+              </select>
+            </label>
+            <div className="col-span-2">
+              <Btn variant="primary" onClick={() => {}}>{editingId ? "Enregistrer" : "Créer le concurrent"}</Btn>
+            </div>
+          </form>
+        </Card>
+      )}
 
       <Card>
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-white/5">
-                {["Concurrent", "Secteur", "Site web", "Fréquence", "Statut", "Dernière analyse", "Modif.", "Actions"].map(h => (
-                  <th key={h} className="text-left text-[10px] font-semibold text-[#5858a0] uppercase tracking-wider px-4 py-3">{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map((c, i) => (
-                <tr key={c.id} className={`border-b border-white/5 hover:bg-white/2 transition-all group ${i === filtered.length - 1 ? "border-b-0" : ""}`}>
-                  <td className="px-4 py-3.5">
-                    <div className="flex items-center gap-3">
-                      <Avatar name={c.name} color={c.color} />
-                      <span className="text-[#e2e2f0] text-sm font-medium">{c.name}</span>
-                    </div>
-                  </td>
-                  <td className="px-4 py-3.5 text-[#7878a0] text-xs">{c.sector}</td>
-                  <td className="px-4 py-3.5">
-                    <a className="text-xs text-[#6366f1] hover:text-[#a5b4fc] flex items-center gap-1 cursor-pointer">
-                      {c.website} <ExternalLink className="w-3 h-3" />
-                    </a>
-                  </td>
-                  <td className="px-4 py-3.5">
-                    <span className="text-xs text-[#c4c4d8] bg-white/5 px-2 py-0.5 rounded-md">{c.frequency}</span>
-                  </td>
-                  <td className="px-4 py-3.5"><StatusBadge status={c.status} /></td>
-                  <td className="px-4 py-3.5 text-[#7878a0] text-xs font-mono">{c.lastScan}</td>
-                  <td className="px-4 py-3.5">
-                    {c.changes > 0 ? <span className="text-xs bg-[#6366f1]/15 text-[#a5b4fc] px-2 py-0.5 rounded-full font-mono">{c.changes}</span> : <span className="text-[#5858a0] text-xs">—</span>}
-                  </td>
-                  <td className="px-4 py-3.5">
-                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all">
-                      <button className="p-1.5 rounded-lg hover:bg-white/8 text-[#7878a0] hover:text-[#c4c4d8]"><Eye className="w-3.5 h-3.5" /></button>
-                      <button className="p-1.5 rounded-lg hover:bg-white/8 text-[#7878a0] hover:text-[#c4c4d8]"><Edit className="w-3.5 h-3.5" /></button>
-                      <button className="p-1.5 rounded-lg hover:bg-red-500/10 text-[#7878a0] hover:text-red-400"><Trash2 className="w-3.5 h-3.5" /></button>
-                    </div>
-                  </td>
+        {loading ? <Loading /> : filtered.length === 0 ? <EmptyState label="Aucun concurrent. Ajoutez-en un pour démarrer la veille." /> : (
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-white/5">
+                  {["Concurrent", "Secteur", "Site web", "Fréquence", "Statut", "Dernière analyse", "Alertes", "Actions"].map((h) => (
+                    <th key={h} className="text-left text-[10px] font-semibold text-[#5858a0] uppercase tracking-wider px-4 py-3">{h}</th>
+                  ))}
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {filtered.map((c, i) => (
+                  <tr key={c.id} className={`border-b border-white/5 hover:bg-white/2 transition-all group ${i === filtered.length - 1 ? "border-b-0" : ""}`}>
+                    <td className="px-4 py-3.5">
+                      <div className="flex items-center gap-3">
+                        <Avatar name={c.name} color={colorFor(c.name)} />
+                        <span className="text-[#e2e2f0] text-sm font-medium">{c.name}</span>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3.5 text-[#7878a0] text-xs">{c.sector || "—"}</td>
+                    <td className="px-4 py-3.5">
+                      {c.website ? <a href={c.website} target="_blank" rel="noreferrer" className="text-xs text-[#6366f1] hover:text-[#a5b4fc] flex items-center gap-1">{c.website.replace(/^https?:\/\//, "")} <ExternalLink className="w-3 h-3" /></a> : <span className="text-[#5858a0] text-xs">—</span>}
+                    </td>
+                    <td className="px-4 py-3.5"><span className="text-xs text-[#c4c4d8] bg-white/5 px-2 py-0.5 rounded-md">{freqLabel(c.monitoring_frequency)}</span></td>
+                    <td className="px-4 py-3.5 cursor-pointer" onClick={() => toggleStatus(c)}><StatusBadge status={c.status === "actif" ? "actif" : "en pause"} /></td>
+                    <td className="px-4 py-3.5 text-[#7878a0] text-xs font-mono">{timeAgo(c.lastScan)}</td>
+                    <td className="px-4 py-3.5">
+                      {c.unreadAlerts > 0 ? <span className="text-xs bg-[#6366f1]/15 text-[#a5b4fc] px-2 py-0.5 rounded-full font-mono">{c.unreadAlerts}</span> : <span className="text-[#5858a0] text-xs">—</span>}
+                    </td>
+                    <td className="px-4 py-3.5">
+                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all">
+                        <button onClick={() => edit(c)} className="p-1.5 rounded-lg hover:bg-white/8 text-[#7878a0] hover:text-[#c4c4d8]"><Edit className="w-3.5 h-3.5" /></button>
+                        <button onClick={() => remove(c.id)} className="p-1.5 rounded-lg hover:bg-red-500/10 text-[#7878a0] hover:text-red-400"><Trash2 className="w-3.5 h-3.5" /></button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </Card>
-
-      <div className="flex items-center justify-between text-xs text-[#7878a0]">
-        <span>{filtered.length} concurrent{filtered.length > 1 ? "s" : ""} affiché{filtered.length > 1 ? "s" : ""}</span>
-        <div className="flex items-center gap-1">
-          {[1, 2].map(n => (
-            <button key={n} className={`w-7 h-7 rounded-lg text-xs font-mono ${n === 1 ? "bg-[#6366f1]/15 text-[#a5b4fc]" : "hover:bg-white/5 text-[#7878a0]"}`}>{n}</button>
-          ))}
-        </div>
-      </div>
     </div>
   );
 }
 
-// ─── SOURCES PAGE ─────────────────────────────────────────────────────────────
+// ─── SOURCES ──────────────────────────────────────────────────────────────────
 
+const SOURCE_TYPES = ["site_web", "blog", "github", "linkedin", "rss", "changelog", "documentation", "emploi"];
+const TYPE_LABEL: Record<string, string> = {
+  site_web: "Site web", blog: "Blog", github: "GitHub", linkedin: "LinkedIn", rss: "RSS",
+  changelog: "Changelog", documentation: "Documentation", emploi: "Offres d'emploi",
+};
 const typeColor: Record<string, string> = {
-  Blog: "#6366f1", Changelog: "#22d3ee", GitHub: "#e2e2f0", LinkedIn: "#3b82f6",
-  RSS: "#f59e0b", Actualités: "#10b981", Documentation: "#8b5cf6",
-  "Offres d'emploi": "#f97316", "Twitter/X": "#7878a0", "Product Hunt": "#ef4444",
+  blog: "#6366f1", changelog: "#22d3ee", github: "#e2e2f0", linkedin: "#3b82f6",
+  rss: "#f59e0b", site_web: "#10b981", documentation: "#8b5cf6", emploi: "#f97316",
 };
 
 function SourcesPage() {
+  const [loading, setLoading] = useState(true);
+  const [sources, setSources] = useState<any[]>([]);
+  const [competitors, setCompetitors] = useState<any[]>([]);
   const [filter, setFilter] = useState("Tous");
-  const types = ["Tous", ...Array.from(new Set(sources.map(s => s.type)))];
-  const filtered = filter === "Tous" ? sources : sources.filter(s => s.type === filter);
+  const [showForm, setShowForm] = useState(false);
+  const [form, setForm] = useState({ competitor_id: "", type: "site_web", url: "" });
+
+  useEffect(() => { load(); }, []);
+
+  async function load() {
+    setLoading(true);
+    const [{ data: sourcesData }, { data: competitorsData }, { data: reportSources }] = await Promise.all([
+      supabase.from("sources").select("*, competitors(name)").order("created_at", { ascending: false }),
+      supabase.from("competitors").select("id, name").order("name"),
+      supabase.from("report_sources").select("source_id"),
+    ]);
+    const reportCountBySource: Record<string, number> = {};
+    (reportSources || []).forEach((rs: any) => { reportCountBySource[rs.source_id] = (reportCountBySource[rs.source_id] || 0) + 1; });
+    setSources((sourcesData || []).map((s: any) => ({ ...s, reportCount: reportCountBySource[s.id] || 0 })));
+    setCompetitors(competitorsData || []);
+    if (!form.competitor_id && competitorsData?.length) setForm((f) => ({ ...f, competitor_id: competitorsData[0].id }));
+    setLoading(false);
+  }
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user || !form.competitor_id) return;
+    await supabase.from("sources").insert({ ...form, user_id: user.id });
+    setForm({ ...form, url: "" });
+    setShowForm(false);
+    load();
+  }
+
+  async function remove(id: string) {
+    if (!confirm("Supprimer cette source ?")) return;
+    await supabase.from("sources").delete().eq("id", id);
+    load();
+  }
+
+  const types = ["Tous", ...SOURCE_TYPES];
+  const filtered = filter === "Tous" ? sources : sources.filter((s) => s.type === filter);
 
   return (
     <div className="space-y-5">
       <div className="flex items-center gap-2 flex-wrap">
-        {types.map(t => (
+        {types.map((t) => (
           <button key={t} onClick={() => setFilter(t)} className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${filter === t ? "bg-[#6366f1]/15 text-[#a5b4fc] border border-[#6366f1]/25" : "bg-white/5 text-[#7878a0] hover:bg-white/8 border border-transparent"}`}>
-            {t}
+            {t === "Tous" ? "Tous" : TYPE_LABEL[t]}
           </button>
         ))}
         <div className="ml-auto flex items-center gap-2">
-          <Btn icon={<Plus className="w-3.5 h-3.5" />} variant="primary">Ajouter une source</Btn>
+          <Btn icon={<Plus className="w-3.5 h-3.5" />} variant="primary" onClick={() => setShowForm(!showForm)}>
+            {showForm ? "Fermer" : "Ajouter une source"}
+          </Btn>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
-        {filtered.map((s) => {
-          const accent = typeColor[s.type] ?? "#6366f1";
-          return (
-            <Card key={s.id} className="p-4 hover:border-white/12 transition-all cursor-pointer group">
-              <div className="flex items-start justify-between mb-3">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0" style={{ backgroundColor: accent + "18" }}>
-                    <Globe className="w-4 h-4" style={{ color: accent }} />
+      {showForm && (
+        <Card className="p-5">
+          <form onSubmit={submit} className="grid grid-cols-3 gap-4">
+            <label className="text-xs text-[#7878a0] flex flex-col gap-1.5">Concurrent
+              <select required value={form.competitor_id} onChange={(e) => setForm({ ...form, competitor_id: e.target.value })} className="bg-[#1c1c2e] border border-white/10 rounded-lg px-3 py-2 text-sm text-[#e2e2f0]">
+                {competitors.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+              </select>
+            </label>
+            <label className="text-xs text-[#7878a0] flex flex-col gap-1.5">Type
+              <select value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value })} className="bg-[#1c1c2e] border border-white/10 rounded-lg px-3 py-2 text-sm text-[#e2e2f0]">
+                {SOURCE_TYPES.map((t) => <option key={t} value={t}>{TYPE_LABEL[t]}</option>)}
+              </select>
+            </label>
+            <label className="text-xs text-[#7878a0] flex flex-col gap-1.5">URL
+              <input required value={form.url} onChange={(e) => setForm({ ...form, url: e.target.value })} placeholder="https://…" className="bg-[#1c1c2e] border border-white/10 rounded-lg px-3 py-2 text-sm text-[#e2e2f0]" />
+            </label>
+            <div className="col-span-3">
+              <Btn variant="primary" onClick={() => {}}>Ajouter</Btn>
+            </div>
+          </form>
+        </Card>
+      )}
+
+      {loading ? <Loading /> : filtered.length === 0 ? <EmptyState label="Aucune source pour ce filtre." /> : (
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+          {filtered.map((s) => {
+            const accent = typeColor[s.type] ?? "#6366f1";
+            return (
+              <Card key={s.id} className="p-4 hover:border-white/12 transition-all group">
+                <div className="flex items-start justify-between mb-3">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0" style={{ backgroundColor: accent + "18" }}>
+                      <Globe className="w-4 h-4" style={{ color: accent }} />
+                    </div>
+                    <div>
+                      <div className="text-[#e2e2f0] text-sm font-medium leading-none mb-0.5">{s.competitors?.name}</div>
+                      <span className="text-[10px] px-1.5 py-0.5 rounded-md font-medium" style={{ backgroundColor: accent + "15", color: accent }}>{TYPE_LABEL[s.type]}</span>
+                    </div>
                   </div>
-                  <div>
-                    <div className="text-[#e2e2f0] text-sm font-medium leading-none mb-0.5">{s.name}</div>
-                    <span className="text-[10px] px-1.5 py-0.5 rounded-md font-medium" style={{ backgroundColor: accent + "15", color: accent }}>{s.type}</span>
+                  <button onClick={() => remove(s.id)} className="opacity-0 group-hover:opacity-100 transition-all p-1 rounded-lg hover:bg-red-500/10 text-[#7878a0] hover:text-red-400">
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+
+                <a href={s.url} target="_blank" rel="noreferrer" className="text-[#7878a0] text-xs font-mono mb-3 truncate block hover:text-[#a5b4fc]">{s.url}</a>
+
+                <div className="flex items-center gap-3">
+                  <div className="flex-1">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-[10px] text-[#5858a0]">Fiabilité</span>
+                      <span className="text-[10px] font-mono text-[#c4c4d8]">{s.reliability_score}%</span>
+                    </div>
+                    <ProgressBar value={s.reliability_score} color={s.reliability_score > 90 ? "#10b981" : s.reliability_score > 75 ? "#f59e0b" : "#ef4444"} />
+                  </div>
+                  <div className="text-right">
+                    <div className="text-[10px] text-[#5858a0]">Dernier scan</div>
+                    <div className="text-[10px] font-mono text-[#7878a0]">{timeAgo(s.last_analyzed_at)}</div>
                   </div>
                 </div>
-                <button className="opacity-0 group-hover:opacity-100 transition-all p-1 rounded-lg hover:bg-white/8 text-[#7878a0]">
-                  <MoreHorizontal className="w-4 h-4" />
-                </button>
-              </div>
 
-              <div className="text-[#7878a0] text-xs font-mono mb-3 truncate">{s.url}</div>
-
-              <div className="flex items-center gap-3">
-                <div className="flex-1">
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-[10px] text-[#5858a0]">Fiabilité</span>
-                    <span className="text-[10px] font-mono text-[#c4c4d8]">{s.reliability}%</span>
-                  </div>
-                  <ProgressBar value={s.reliability} color={s.reliability > 90 ? "#10b981" : s.reliability > 75 ? "#f59e0b" : "#ef4444"} />
+                <div className="mt-3 pt-3 border-t border-white/5 flex items-center justify-between">
+                  <StatusBadge status={s.status === "actif" ? "actif" : s.status === "erreur" ? "erreur" : "en pause"} />
+                  <span className="text-xs font-mono text-[#c4c4d8]">{s.reportCount} rapport{s.reportCount !== 1 ? "s" : ""}</span>
                 </div>
-                <div className="text-right">
-                  <div className="text-[10px] text-[#5858a0]">Dernier scan</div>
-                  <div className="text-[10px] font-mono text-[#7878a0]">il y a {s.lastScan}</div>
-                </div>
-              </div>
-
-              <div className="mt-3 pt-3 border-t border-white/5 flex items-center justify-between">
-                <span className="text-[#7878a0] text-xs">{s.competitor}</span>
-                <span className="text-xs font-mono text-[#c4c4d8]">{s.articlesFound} article{s.articlesFound !== 1 ? "s" : ""}</span>
-              </div>
-            </Card>
-          );
-        })}
-      </div>
+              </Card>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
 
-// ─── REPORTS PAGE ─────────────────────────────────────────────────────────────
+// ─── RAPPORTS IA ──────────────────────────────────────────────────────────────
 
-function ReportsPage({ onSelect }: { onSelect: (r: typeof reports[0]) => void }) {
+function ReportsPage({ onSelect }: { onSelect: (id: string) => void }) {
+  const [loading, setLoading] = useState(true);
+  const [reports, setReports] = useState<any[]>([]);
   const [tab, setTab] = useState("Tous");
-  const tabs = ["Tous", "Publié", "Archivé"];
-  const filtered = tab === "Tous" ? reports : reports.filter(r => r.status === tab.toLowerCase());
+  const tabs = ["Tous", "Publié", "Brouillon"];
+
+  useEffect(() => { load(); }, []);
+
+  async function load() {
+    setLoading(true);
+    const { data } = await supabase.from("reports").select("*, competitors(name)").order("generated_at", { ascending: false });
+    setReports(data || []);
+    setLoading(false);
+  }
+
+  const filtered = tab === "Tous" ? reports : reports.filter((r) => (tab === "Publié" ? r.status === "publie" : r.status === "brouillon"));
 
   return (
     <div className="space-y-5">
       <div className="flex items-center gap-1 border-b border-white/5 pb-0">
-        {tabs.map(t => (
+        {tabs.map((t) => (
           <button key={t} onClick={() => setTab(t)} className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-all -mb-px ${tab === t ? "border-[#6366f1] text-[#a5b4fc]" : "border-transparent text-[#7878a0] hover:text-[#c4c4d8]"}`}>
             {t}
           </button>
         ))}
         <div className="ml-auto flex items-center gap-2 pb-2">
-          <Btn icon={<RefreshCw className="w-3.5 h-3.5" />} variant="secondary">Générer</Btn>
-          <Btn icon={<Download className="w-3.5 h-3.5" />} variant="secondary">Exporter</Btn>
+          <Btn icon={<RefreshCw className="w-3.5 h-3.5" />} variant="secondary" onClick={load}>Actualiser</Btn>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {filtered.map((r) => (
-          <Card key={r.id} className="p-5 hover:border-white/14 transition-all cursor-pointer group" onClick={() => onSelect(r)}>
-            <div className="flex items-start justify-between mb-3">
-              <div className="flex items-center gap-2">
-                <Avatar name={r.competitor} color={competitors.find(c => c.name === r.competitor)?.color ?? "#6366f1"} />
-                <div>
-                  <div className="text-[#7878a0] text-xs">{r.competitor}</div>
-                  <div className="text-[#5858a0] text-[10px] font-mono">{r.date}</div>
+      {loading ? <Loading /> : filtered.length === 0 ? (
+        <EmptyState label="Aucun rapport pour l'instant. Le pipeline en publiera dès qu'un changement significatif sera détecté." />
+      ) : (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          {filtered.map((r) => (
+            <Card key={r.id} className="p-5 hover:border-white/14 transition-all cursor-pointer group" onClick={() => onSelect(r.id)}>
+              <div className="flex items-start justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <Avatar name={r.competitors?.name || "?"} color={colorFor(r.competitors?.name || "?")} />
+                  <div>
+                    <div className="text-[#7878a0] text-xs">{r.competitors?.name}</div>
+                    <div className="text-[#5858a0] text-[10px] font-mono">{formatDateFr(r.generated_at)}</div>
+                  </div>
+                </div>
+                <StatusBadge status={r.status} />
+              </div>
+
+              <h3 className="text-[#e2e2f0] font-semibold text-sm leading-snug mb-2 group-hover:text-white transition-colors">{r.title}</h3>
+              <p className="text-[#7878a0] text-xs leading-relaxed mb-4 line-clamp-2">{r.summary}</p>
+
+              <div className="flex items-center gap-3">
+                <div className="flex-1">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-[10px] text-[#5858a0]">Score de confiance</span>
+                    <span className="text-[10px] font-mono text-[#c4c4d8]">{r.confidence_score}%</span>
+                  </div>
+                  <ProgressBar value={r.confidence_score} color={r.confidence_score > 90 ? "#10b981" : r.confidence_score > 80 ? "#f59e0b" : "#ef4444"} />
+                </div>
+                <div className="text-right shrink-0">
+                  <div className="text-[10px] text-[#5858a0]">Sources</div>
+                  <div className="text-xs font-mono text-[#c4c4d8] font-semibold">{r.sources_count}</div>
                 </div>
               </div>
-              <StatusBadge status={r.status} />
-            </div>
-
-            <h3 className="text-[#e2e2f0] font-semibold text-sm leading-snug mb-2 group-hover:text-white transition-colors">{r.title}</h3>
-            <p className="text-[#7878a0] text-xs leading-relaxed mb-4 line-clamp-2">{r.summary}</p>
-
-            <div className="flex items-center gap-3 mb-3">
-              <div className="flex-1">
-                <div className="flex items-center justify-between mb-1">
-                  <span className="text-[10px] text-[#5858a0]">Score de confiance</span>
-                  <span className="text-[10px] font-mono text-[#c4c4d8]">{r.confidence}%</span>
-                </div>
-                <ProgressBar value={r.confidence} color={r.confidence > 90 ? "#10b981" : r.confidence > 80 ? "#f59e0b" : "#ef4444"} />
-              </div>
-              <div className="text-right shrink-0">
-                <div className="text-[10px] text-[#5858a0]">Sources</div>
-                <div className="text-xs font-mono text-[#c4c4d8] font-semibold">{r.sources}</div>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-1.5 flex-wrap">
-              {r.tags.map(tag => (
-                <span key={tag} className="text-[10px] px-2 py-0.5 rounded-full bg-[#6366f1]/10 text-[#a5b4fc] border border-[#6366f1]/15">{tag}</span>
-              ))}
-            </div>
-          </Card>
-        ))}
-      </div>
+            </Card>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
 
-// ─── REPORT DETAIL PAGE ───────────────────────────────────────────────────────
+function ReportDetailPage({ reportId, onBack }: { reportId: string; onBack: () => void }) {
+  const [loading, setLoading] = useState(true);
+  const [report, setReport] = useState<any>(null);
+  const [citedSources, setCitedSources] = useState<any[]>([]);
 
-function ReportDetailPage({ report, onBack }: { report: typeof reports[0]; onBack: () => void }) {
+  useEffect(() => { load(); }, [reportId]);
+
+  async function load() {
+    setLoading(true);
+    const [{ data: r }, { data: rs }] = await Promise.all([
+      supabase.from("reports").select("*, competitors(name)").eq("id", reportId).single(),
+      supabase.from("report_sources").select("*, sources(type, reliability_score)").eq("report_id", reportId),
+    ]);
+    setReport(r);
+    setCitedSources(rs || []);
+    setLoading(false);
+  }
+
+  if (loading || !report) return <Loading />;
+
+  const facts: string[] = report.facts || [];
+  const recommendations: string[] = report.recommendations || [];
+
   return (
     <div className="max-w-4xl space-y-6">
       <button onClick={onBack} className="flex items-center gap-2 text-[#7878a0] hover:text-[#c4c4d8] text-sm transition-colors">
@@ -802,236 +951,326 @@ function ReportDetailPage({ report, onBack }: { report: typeof reports[0]; onBac
       <Card className="p-6">
         <div className="flex items-start justify-between mb-4">
           <div className="flex items-center gap-3">
-            <Avatar name={report.competitor} color={competitors.find(c => c.name === report.competitor)?.color ?? "#6366f1"} size="md" />
+            <Avatar name={report.competitors?.name || "?"} color={colorFor(report.competitors?.name || "?")} size="md" />
             <div>
-              <div className="text-[#7878a0] text-sm">{report.competitor}</div>
-              <div className="text-[#5858a0] text-xs font-mono">{report.date}</div>
+              <div className="text-[#7878a0] text-sm">{report.competitors?.name}</div>
+              <div className="text-[#5858a0] text-xs font-mono">{formatDateFr(report.generated_at)}</div>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            <StatusBadge status={report.status} />
-            <Btn icon={<Download className="w-3.5 h-3.5" />} variant="secondary">PDF</Btn>
-          </div>
+          <StatusBadge status={report.status} />
         </div>
         <h2 className="text-xl font-bold text-[#e2e2f0] mb-3">{report.title}</h2>
-        <div className="flex items-center gap-4 mb-4">
+        <div className="flex items-center gap-4">
           <div className="flex items-center gap-2">
             <span className="text-[#7878a0] text-xs">Confiance :</span>
-            <span className="text-xs font-mono font-semibold text-emerald-400">{report.confidence}%</span>
+            <span className="text-xs font-mono font-semibold text-emerald-400">{report.confidence_score}%</span>
           </div>
           <div className="flex items-center gap-2">
             <span className="text-[#7878a0] text-xs">Sources :</span>
-            <span className="text-xs font-mono font-semibold text-[#c4c4d8]">{report.sources}</span>
+            <span className="text-xs font-mono font-semibold text-[#c4c4d8]">{report.sources_count}</span>
           </div>
-        </div>
-        <div className="flex gap-1.5 flex-wrap">
-          {report.tags.map(t => <span key={t} className="text-xs px-2 py-0.5 rounded-full bg-[#6366f1]/10 text-[#a5b4fc] border border-[#6366f1]/15">{t}</span>)}
         </div>
       </Card>
-
-      {[
-        { title: "Résumé exécutif", icon: FileText, content: report.summary + " Cette analyse a été réalisée à partir de 23 sources croisées et vérifiées par l'Agent Vérification avec un taux de fiabilité moyen de 94%." },
-        { title: "Faits importants détectés", icon: AlertCircle, isList: true, items: ["Nouvelle API IA pour optimisation des paiements récurrents annoncée publiquement", "Réduction tarifaire de 0.1% pour les volumes supérieurs à 1M$/mois", "47 offres d'emploi ML/IA publiées en juin 2026", "Recrutement de 12 ingénieurs machine learning en Europe (Berlin, Paris, Amsterdam)", "Partenariat stratégique non confirmé avec un acteur bancaire européen majeur"] },
-        { title: "Analyse IA", icon: Bot, content: "L'analyse sémantique révèle une accélération significative de la stratégie IA de Stripe, avec un investissement ciblé sur la fraud detection et l'optimisation automatique. Le signal recrutement est particulièrement fort en Europe, suggérant une expansion du centre R&D. La réduction tarifaire ciblée grands volumes indique une bataille pour la rétention des clients enterprise. Recommandation : surveiller de près les annonces produit du prochain Stripe Sessions." },
-        { title: "Recommandations stratégiques", icon: Target, isList: true, items: ["Préparer une réponse commerciale aux clients enterprise potentiellement ciblés par Stripe", "Surveiller de près le dépôt de brevets liés à l'IA de paiement", "Analyser l'impact du recrutement ML sur le roadmap produit estimé à 6-12 mois", "Activer une alerte hebdomadaire sur les changelogs et API Stripe"] },
-      ].map(section => (
-        <Card key={section.title} className="p-5">
-          <div className="flex items-center gap-2 mb-4">
-            <div className="w-7 h-7 rounded-lg bg-[#6366f1]/10 flex items-center justify-center">
-              <section.icon className="w-3.5 h-3.5 text-[#6366f1]" />
-            </div>
-            <h3 className="text-[#e2e2f0] font-semibold text-sm">{section.title}</h3>
-          </div>
-          {section.isList ? (
-            <ul className="space-y-2">
-              {section.items!.map((item, i) => (
-                <li key={i} className="flex items-start gap-2.5 text-sm text-[#c4c4d8]">
-                  <CheckCircle2 className="w-4 h-4 text-[#6366f1] shrink-0 mt-0.5" />
-                  {item}
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="text-[#c4c4d8] text-sm leading-relaxed">{section.content}</p>
-          )}
-        </Card>
-      ))}
 
       <Card className="p-5">
         <div className="flex items-center gap-2 mb-4">
-          <div className="w-7 h-7 rounded-lg bg-[#6366f1]/10 flex items-center justify-center">
-            <Link className="w-3.5 h-3.5 text-[#6366f1]" />
+          <div className="w-7 h-7 rounded-lg bg-[#6366f1]/10 flex items-center justify-center"><FileText className="w-3.5 h-3.5 text-[#6366f1]" /></div>
+          <h3 className="text-[#e2e2f0] font-semibold text-sm">Résumé exécutif</h3>
+        </div>
+        <p className="text-[#c4c4d8] text-sm leading-relaxed">{report.summary}</p>
+      </Card>
+
+      {facts.length > 0 && (
+        <Card className="p-5">
+          <div className="flex items-center gap-2 mb-4">
+            <div className="w-7 h-7 rounded-lg bg-[#6366f1]/10 flex items-center justify-center"><AlertCircle className="w-3.5 h-3.5 text-[#6366f1]" /></div>
+            <h3 className="text-[#e2e2f0] font-semibold text-sm">Faits importants détectés</h3>
           </div>
+          <ul className="space-y-2">
+            {facts.map((f, i) => (
+              <li key={i} className="flex items-start gap-2.5 text-sm text-[#c4c4d8]">
+                <CheckCircle2 className="w-4 h-4 text-[#6366f1] shrink-0 mt-0.5" /> {f}
+              </li>
+            ))}
+          </ul>
+        </Card>
+      )}
+
+      {report.analysis && (
+        <Card className="p-5">
+          <div className="flex items-center gap-2 mb-4">
+            <div className="w-7 h-7 rounded-lg bg-[#6366f1]/10 flex items-center justify-center"><Bot className="w-3.5 h-3.5 text-[#6366f1]" /></div>
+            <h3 className="text-[#e2e2f0] font-semibold text-sm">Analyse IA</h3>
+          </div>
+          <p className="text-[#c4c4d8] text-sm leading-relaxed">{report.analysis}</p>
+        </Card>
+      )}
+
+      {recommendations.length > 0 && (
+        <Card className="p-5">
+          <div className="flex items-center gap-2 mb-4">
+            <div className="w-7 h-7 rounded-lg bg-[#6366f1]/10 flex items-center justify-center"><Target className="w-3.5 h-3.5 text-[#6366f1]" /></div>
+            <h3 className="text-[#e2e2f0] font-semibold text-sm">Recommandations stratégiques</h3>
+          </div>
+          <ul className="space-y-2">
+            {recommendations.map((rec, i) => (
+              <li key={i} className="flex items-start gap-2.5 text-sm text-[#c4c4d8]">
+                <CheckCircle2 className="w-4 h-4 text-[#6366f1] shrink-0 mt-0.5" /> {rec}
+              </li>
+            ))}
+          </ul>
+        </Card>
+      )}
+
+      <Card className="p-5">
+        <div className="flex items-center gap-2 mb-4">
+          <div className="w-7 h-7 rounded-lg bg-[#6366f1]/10 flex items-center justify-center"><LinkIcon className="w-3.5 h-3.5 text-[#6366f1]" /></div>
           <h3 className="text-[#e2e2f0] font-semibold text-sm">Sources citées</h3>
         </div>
-        <div className="space-y-2">
-          {sources.filter(s => s.competitor === report.competitor).slice(0, 4).map(s => (
-            <div key={s.id} className="flex items-center gap-3 p-2.5 rounded-lg hover:bg-white/3 transition-all">
-              <span className="text-[10px] px-1.5 py-0.5 rounded-md font-medium" style={{ backgroundColor: (typeColor[s.type] ?? "#6366f1") + "15", color: typeColor[s.type] ?? "#6366f1" }}>{s.type}</span>
-              <span className="text-[#c4c4d8] text-xs flex-1">{s.name}</span>
-              <span className="text-[#7878a0] text-[10px] font-mono">{s.reliability}%</span>
-              <ExternalLink className="w-3.5 h-3.5 text-[#5858a0]" />
-            </div>
-          ))}
-        </div>
+        {citedSources.length === 0 ? <EmptyState label="Aucune source liée." /> : (
+          <div className="space-y-2">
+            {citedSources.map((cs) => (
+              <a key={cs.id} href={cs.url} target="_blank" rel="noreferrer" className="flex items-center gap-3 p-2.5 rounded-lg hover:bg-white/3 transition-all">
+                <span className="text-[10px] px-1.5 py-0.5 rounded-md font-medium" style={{ backgroundColor: (typeColor[cs.sources?.type] ?? "#6366f1") + "15", color: typeColor[cs.sources?.type] ?? "#6366f1" }}>{TYPE_LABEL[cs.sources?.type] || cs.sources?.type}</span>
+                <span className="text-[#c4c4d8] text-xs flex-1 truncate">{cs.url}</span>
+                <span className="text-[#7878a0] text-[10px] font-mono">{cs.sources?.reliability_score}%</span>
+                <ExternalLink className="w-3.5 h-3.5 text-[#5858a0]" />
+              </a>
+            ))}
+          </div>
+        )}
       </Card>
     </div>
   );
 }
 
-// ─── AGENTS PAGE ──────────────────────────────────────────────────────────────
+// ─── AGENTS IA ────────────────────────────────────────────────────────────────
 
 function AgentsPage() {
+  const [loading, setLoading] = useState(true);
+  const [agentData, setAgentData] = useState<Record<string, any>>({});
+
+  useEffect(() => { load(); }, []);
+
+  async function load() {
+    setLoading(true);
+    const startToday = new Date(); startToday.setHours(0, 0, 0, 0);
+    const { data: runs } = await supabase
+      .from("agent_runs")
+      .select("*")
+      .order("started_at", { ascending: false })
+      .limit(500);
+
+    const byAgent: Record<string, any> = {};
+    AGENT_ORDER.forEach((name) => {
+      const runsForAgent = (runs || []).filter((r: any) => r.agent_name === name);
+      const latest = runsForAgent[0];
+      const successRuns = runsForAgent.filter((r: any) => r.status === "success" && r.duration_ms);
+      const avgMs = successRuns.length ? successRuns.reduce((s: number, r: any) => s + r.duration_ms, 0) / successRuns.length : null;
+      const tasksToday = runsForAgent.filter((r: any) => new Date(r.started_at) >= startToday).length;
+      byAgent[name] = {
+        status: agentStatusLabel(latest?.status),
+        progress: latest?.status === "running" ? (latest.progress || 50) : 0,
+        tasksToday,
+        avgTime: avgDurationLabel(avgMs),
+        lastRun: latest ? timeAgo(latest.started_at) : "jamais",
+        recent: runsForAgent.slice(0, 3).map((r: any) => r.message || `${r.status}`),
+      };
+    });
+    setAgentData(byAgent);
+    setLoading(false);
+  }
+
+  if (loading) return <Loading />;
+
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-      {agents.map((a) => (
-        <Card key={a.id} className="p-5">
-          <div className="flex items-start justify-between mb-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ backgroundColor: a.color + "15" }}>
-                <a.icon className="w-5 h-5" style={{ color: a.color }} />
+      {AGENT_ORDER.map((name) => {
+        const meta = AGENT_META[name];
+        const a = agentData[name];
+        return (
+          <Card key={name} className="p-5">
+            <div className="flex items-start justify-between mb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ backgroundColor: meta.color + "15" }}>
+                  <meta.icon className="w-5 h-5" style={{ color: meta.color }} />
+                </div>
+                <div>
+                  <div className="text-[#e2e2f0] font-semibold text-sm">{meta.name}</div>
+                  <div className="text-[#7878a0] text-xs mt-0.5">{meta.description}</div>
+                </div>
               </div>
-              <div>
-                <div className="text-[#e2e2f0] font-semibold text-sm">{a.name}</div>
-                <div className="text-[#7878a0] text-xs mt-0.5">{a.description}</div>
-              </div>
+              <StatusBadge status={a.status} />
             </div>
-            <StatusBadge status={a.status} />
-          </div>
 
-          {a.progress > 0 && (
-            <div className="mb-4">
-              <div className="flex items-center justify-between mb-1.5">
-                <span className="text-[10px] text-[#5858a0]">Progression</span>
-                <span className="text-[10px] font-mono text-[#c4c4d8]">{a.progress}%</span>
+            {a.progress > 0 && (
+              <div className="mb-4">
+                <div className="flex items-center justify-between mb-1.5">
+                  <span className="text-[10px] text-[#5858a0]">Progression</span>
+                  <span className="text-[10px] font-mono text-[#c4c4d8]">{a.progress}%</span>
+                </div>
+                <ProgressBar value={a.progress} color={meta.color} />
               </div>
-              <ProgressBar value={a.progress} color={a.color} />
-            </div>
-          )}
+            )}
 
-          <div className="grid grid-cols-3 gap-3 mb-4">
-            {[
-              { label: "Tâches aujourd'hui", value: a.tasksToday.toLocaleString() },
-              { label: "Temps moyen", value: a.avgTime },
-              { label: "Dernier run", value: a.lastRun },
-            ].map(stat => (
-              <div key={stat.label} className="bg-white/3 rounded-lg p-2.5 text-center">
-                <div className="text-[#e2e2f0] font-mono text-sm font-semibold">{stat.value}</div>
-                <div className="text-[#5858a0] text-[10px] mt-0.5">{stat.label}</div>
-              </div>
-            ))}
-          </div>
-
-          <div>
-            <div className="text-[10px] text-[#5858a0] uppercase tracking-wider mb-2">Tâches récentes</div>
-            <div className="space-y-1.5">
-              {a.recent.map((task, i) => (
-                <div key={i} className="flex items-center gap-2 text-xs text-[#7878a0]">
-                  <span className="w-1 h-1 rounded-full bg-white/20 shrink-0" />
-                  {task}
+            <div className="grid grid-cols-3 gap-3 mb-4">
+              {[
+                { label: "Tâches aujourd'hui", value: String(a.tasksToday) },
+                { label: "Temps moyen", value: a.avgTime },
+                { label: "Dernier run", value: a.lastRun },
+              ].map((stat) => (
+                <div key={stat.label} className="bg-white/3 rounded-lg p-2.5 text-center">
+                  <div className="text-[#e2e2f0] font-mono text-sm font-semibold">{stat.value}</div>
+                  <div className="text-[#5858a0] text-[10px] mt-0.5">{stat.label}</div>
                 </div>
               ))}
             </div>
-          </div>
 
-          <div className="flex items-center gap-2 mt-4 pt-4 border-t border-white/5">
-            <Btn variant="secondary" icon={<RefreshCw className="w-3 h-3" />}>Redémarrer</Btn>
-            {a.status === "actif" ? (
-              <Btn variant="secondary" icon={<PauseCircle className="w-3 h-3" />}>Pause</Btn>
-            ) : a.status !== "inactif" ? (
-              <Btn variant="secondary" icon={<PlayCircle className="w-3 h-3" />}>Démarrer</Btn>
-            ) : null}
-            <button className="ml-auto p-1.5 rounded-lg hover:bg-white/8 text-[#7878a0] hover:text-[#c4c4d8]"><MoreHorizontal className="w-4 h-4" /></button>
-          </div>
-        </Card>
-      ))}
+            <div>
+              <div className="text-[10px] text-[#5858a0] uppercase tracking-wider mb-2">Exécutions récentes</div>
+              {a.recent.length === 0 ? (
+                <div className="text-xs text-[#5858a0]">Aucune exécution encore.</div>
+              ) : (
+                <div className="space-y-1.5">
+                  {a.recent.map((task: string, i: number) => (
+                    <div key={i} className="flex items-center gap-2 text-xs text-[#7878a0]">
+                      <span className="w-1 h-1 rounded-full bg-white/20 shrink-0" /> {task}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </Card>
+        );
+      })}
     </div>
   );
 }
 
-// ─── HISTORY PAGE ─────────────────────────────────────────────────────────────
+// ─── HISTORIQUE ───────────────────────────────────────────────────────────────
 
 const histTypeConfig: Record<string, { color: string; icon: any }> = {
-  découverte: { color: "#6366f1", icon: Search },
-  changement: { color: "#f59e0b", icon: AlertTriangle },
-  analyse: { color: "#8b5cf6", icon: BarChart2 },
-  vérification: { color: "#22d3ee", icon: Shield },
-  publication: { color: "#10b981", icon: Zap },
-  rapport: { color: "#6366f1", icon: FileText },
-  erreur: { color: "#ef4444", icon: XCircle },
+  recherche: { color: "#6366f1", icon: Search },
+  scraping: { color: "#8b5cf6", icon: Database },
+  verification: { color: "#22d3ee", icon: Shield },
+  analyse: { color: "#f59e0b", icon: BarChart2 },
+  redaction: { color: "#10b981", icon: FileText },
+  controle_qualite: { color: "#ef4444", icon: CheckCircle2 },
+  publication: { color: "#f97316", icon: Zap },
 };
 
 function HistoryPage() {
-  const grouped = historyItems.reduce((acc, item) => {
-    if (!acc[item.date]) acc[item.date] = [];
-    acc[item.date].push(item);
-    return acc;
-  }, {} as Record<string, typeof historyItems>);
+  const [loading, setLoading] = useState(true);
+  const [items, setItems] = useState<any[]>([]);
+  const [competitors, setCompetitors] = useState<any[]>([]);
+  const [competitorFilter, setCompetitorFilter] = useState("");
+
+  useEffect(() => { load(); }, []);
+
+  async function load() {
+    setLoading(true);
+    const [{ data: runs }, { data: competitorsData }] = await Promise.all([
+      supabase.from("agent_runs").select("*, competitors(name)").order("started_at", { ascending: false }).limit(200),
+      supabase.from("competitors").select("id, name").order("name"),
+    ]);
+    setItems(runs || []);
+    setCompetitors(competitorsData || []);
+    setLoading(false);
+  }
+
+  const filtered = competitorFilter ? items.filter((i) => i.competitor_id === competitorFilter) : items;
+  const grouped: Record<string, any[]> = {};
+  filtered.forEach((item) => {
+    const key = formatDateFr(item.started_at);
+    if (!grouped[key]) grouped[key] = [];
+    grouped[key].push(item);
+  });
 
   return (
     <div className="max-w-3xl space-y-6">
       <div className="flex items-center gap-3">
-        <Btn icon={<Filter className="w-3.5 h-3.5" />} variant="secondary">Filtrer</Btn>
-        <select className="bg-[#111119] border border-white/8 rounded-lg px-3 py-1.5 text-xs text-[#c4c4d8] focus:outline-none">
+        <select value={competitorFilter} onChange={(e) => setCompetitorFilter(e.target.value)} className="bg-[#111119] border border-white/8 rounded-lg px-3 py-1.5 text-xs text-[#c4c4d8] focus:outline-none">
           <option value="">Tous les concurrents</option>
-          {competitors.map(c => <option key={c.id}>{c.name}</option>)}
+          {competitors.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
         </select>
+        <Btn icon={<RefreshCw className="w-3.5 h-3.5" />} variant="secondary" onClick={load}>Actualiser</Btn>
       </div>
 
-      {Object.entries(grouped).map(([date, items]) => (
-        <div key={date}>
-          <div className="flex items-center gap-3 mb-3">
-            <span className="text-xs font-semibold text-[#7878a0] uppercase tracking-wider">{date}</span>
-            <div className="flex-1 h-px bg-white/5" />
-            <span className="text-[10px] text-[#5858a0] font-mono">{items.length} événement{items.length > 1 ? "s" : ""}</span>
-          </div>
-          <div className="space-y-2">
-            {items.map((item) => {
-              const tc = histTypeConfig[item.type] ?? { color: "#7878a0", icon: Circle };
-              const Icon = tc.icon;
-              return (
-                <div key={item.id} className="flex items-start gap-4 p-4 rounded-xl bg-[#111119] border border-white/5 hover:border-white/10 transition-all cursor-pointer group">
-                  <div className="flex flex-col items-center gap-1 shrink-0">
-                    <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: tc.color + "15" }}>
+      {loading ? <Loading /> : Object.keys(grouped).length === 0 ? <EmptyState label="Aucun événement encore." /> : (
+        Object.entries(grouped).map(([date, dayItems]) => (
+          <div key={date}>
+            <div className="flex items-center gap-3 mb-3">
+              <span className="text-xs font-semibold text-[#7878a0] uppercase tracking-wider">{date}</span>
+              <div className="flex-1 h-px bg-white/5" />
+              <span className="text-[10px] text-[#5858a0] font-mono">{dayItems.length} événement{dayItems.length > 1 ? "s" : ""}</span>
+            </div>
+            <div className="space-y-2">
+              {dayItems.map((item) => {
+                const tc = item.status === "error" ? { color: "#ef4444", icon: XCircle } : (histTypeConfig[item.agent_name] ?? { color: "#7878a0", icon: Circle });
+                const Icon = tc.icon;
+                const meta = AGENT_META[item.agent_name as AgentName];
+                return (
+                  <div key={item.id} className="flex items-start gap-4 p-4 rounded-xl bg-[#111119] border border-white/5 hover:border-white/10 transition-all">
+                    <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0" style={{ backgroundColor: tc.color + "15" }}>
                       <Icon className="w-4 h-4" style={{ color: tc.color }} />
                     </div>
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-start justify-between gap-2 mb-1">
-                      <span className="text-[#c4c4d8] text-sm font-medium leading-snug">{item.action}</span>
-                      <span className="text-[10px] font-mono text-[#5858a0] shrink-0">{item.time}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-[10px] px-1.5 py-0.5 rounded-md font-medium" style={{ backgroundColor: tc.color + "12", color: tc.color }}>{item.type}</span>
-                      <span className="text-[#5858a0] text-[10px]">{item.competitor}</span>
-                      <span className="text-[#5858a0] text-[10px]">·</span>
-                      <span className="text-[#5858a0] text-[10px]">Agent {item.agent}</span>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-start justify-between gap-2 mb-1">
+                        <span className="text-[#c4c4d8] text-sm font-medium leading-snug">{item.message || meta?.name}</span>
+                        <span className="text-[10px] font-mono text-[#5858a0] shrink-0">{formatTimeFr(item.started_at)}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-[10px] px-1.5 py-0.5 rounded-md font-medium" style={{ backgroundColor: tc.color + "12", color: tc.color }}>{meta?.name}</span>
+                        {item.competitors?.name && <span className="text-[#5858a0] text-[10px]">{item.competitors.name}</span>}
+                      </div>
                     </div>
                   </div>
-                </div>
-              );
-            })}
+                );
+              })}
+            </div>
           </div>
-        </div>
-      ))}
+        ))
+      )}
     </div>
   );
 }
 
-// ─── ALERTS PAGE ──────────────────────────────────────────────────────────────
+// ─── ALERTES ──────────────────────────────────────────────────────────────────
 
 function AlertsPage() {
+  const [loading, setLoading] = useState(true);
+  const [data, setData] = useState<any[]>([]);
   const [filter, setFilter] = useState("Toutes");
-  const [data, setData] = useState(alertsData);
-  const priorities = ["Toutes", "Critique", "Haute", "Moyenne", "Basse"];
-  const filtered = filter === "Toutes" ? data : data.filter(a => a.priority === filter.toLowerCase());
-  const unread = data.filter(a => !a.read).length;
+  const priorities = ["Toutes", "Haute", "Moyenne", "Basse"];
+
+  useEffect(() => { load(); }, []);
+
+  async function load() {
+    setLoading(true);
+    const { data: alerts } = await supabase.from("alerts").select("*, competitors(name)").order("created_at", { ascending: false });
+    setData(alerts || []);
+    setLoading(false);
+  }
+
+  async function markRead(id: string) {
+    setData((d) => d.map((x) => (x.id === id ? { ...x, read: true } : x)));
+    await supabase.from("alerts").update({ read: true }).eq("id", id);
+  }
+
+  async function markAllRead() {
+    const ids = data.filter((a) => !a.read).map((a) => a.id);
+    setData((d) => d.map((a) => ({ ...a, read: true })));
+    if (ids.length) await supabase.from("alerts").update({ read: true }).in("id", ids);
+  }
+
+  const filtered = filter === "Toutes" ? data : data.filter((a) => a.priority === filter.toLowerCase());
+  const unread = data.filter((a) => !a.read).length;
 
   return (
     <div className="space-y-5">
       <div className="flex items-center gap-3 flex-wrap">
         <div className="flex items-center gap-1">
-          {priorities.map(p => (
+          {priorities.map((p) => (
             <button key={p} onClick={() => setFilter(p)} className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${filter === p ? "bg-[#6366f1]/15 text-[#a5b4fc] border border-[#6366f1]/25" : "bg-white/5 text-[#7878a0] hover:bg-white/8 border border-transparent"}`}>
               {p}
             </button>
@@ -1040,66 +1279,87 @@ function AlertsPage() {
         {unread > 0 && (
           <div className="ml-auto flex items-center gap-2">
             <span className="text-xs text-[#7878a0]">{unread} non lue{unread > 1 ? "s" : ""}</span>
-            <Btn variant="secondary" onClick={() => setData(d => d.map(a => ({ ...a, read: true })))}>Tout marquer comme lu</Btn>
+            <Btn variant="secondary" onClick={markAllRead}>Tout marquer comme lu</Btn>
           </div>
         )}
       </div>
 
-      <div className="space-y-3">
-        {filtered.map((a) => (
-          <Card key={a.id} className={`p-5 hover:border-white/12 transition-all cursor-pointer ${!a.read ? "border-[#6366f1]/20" : ""}`} onClick={() => setData(d => d.map(x => x.id === a.id ? { ...x, read: true } : x))}>
-            <div className="flex items-start gap-4">
-              <div className="flex flex-col items-center gap-1 shrink-0 mt-0.5">
-                {!a.read && <span className="w-2 h-2 rounded-full bg-[#6366f1]" />}
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-start justify-between gap-3 mb-2">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <PriorityBadge priority={a.priority} />
-                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-white/5 text-[#7878a0] border border-white/8">{a.type}</span>
-                  </div>
-                  <span className="text-[10px] text-[#5858a0] font-mono shrink-0">{a.date}</span>
+      {loading ? <Loading /> : filtered.length === 0 ? <EmptyState label="Aucune alerte pour ce filtre." /> : (
+        <div className="space-y-3">
+          {filtered.map((a) => (
+            <Card key={a.id} className={`p-5 hover:border-white/12 transition-all cursor-pointer ${!a.read ? "border-[#6366f1]/20" : ""}`} onClick={() => markRead(a.id)}>
+              <div className="flex items-start gap-4">
+                <div className="flex flex-col items-center gap-1 shrink-0 mt-0.5">
+                  {!a.read && <span className="w-2 h-2 rounded-full bg-[#6366f1]" />}
                 </div>
-                <h3 className="text-[#e2e2f0] font-semibold text-sm mb-1.5">{a.title}</h3>
-                <p className="text-[#7878a0] text-xs leading-relaxed mb-3">{a.description}</p>
-                <div className="flex items-center gap-3">
-                  <div className="flex items-center gap-1.5">
-                    <Avatar name={a.competitor} color={competitors.find(c => c.name === a.competitor)?.color ?? "#6366f1"} size="sm" />
-                    <span className="text-xs text-[#7878a0]">{a.competitor}</span>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-start justify-between gap-3 mb-2">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <PriorityBadge priority={a.priority} />
+                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-white/5 text-[#7878a0] border border-white/8">{ALERT_TYPE_LABEL[a.type] || a.type}</span>
+                    </div>
+                    <span className="text-[10px] text-[#5858a0] font-mono shrink-0">{formatDateFr(a.created_at)}</span>
                   </div>
-                  <div className="ml-auto flex items-center gap-2">
-                    <Btn variant="ghost">Ignorer</Btn>
-                    <Btn variant="secondary">Voir le rapport</Btn>
+                  <h3 className="text-[#e2e2f0] font-semibold text-sm mb-1.5">{a.title}</h3>
+                  {a.description && <p className="text-[#7878a0] text-xs leading-relaxed mb-3">{a.description}</p>}
+                  <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-1.5">
+                      <Avatar name={a.competitors?.name || "?"} color={colorFor(a.competitors?.name || "?")} size="sm" />
+                      <span className="text-xs text-[#7878a0]">{a.competitors?.name}</span>
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
-          </Card>
-        ))}
-      </div>
+            </Card>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
 
-// ─── SETTINGS PAGE ────────────────────────────────────────────────────────────
+// ─── PARAMÈTRES ───────────────────────────────────────────────────────────────
 
 function SettingsPage() {
   const [tab, setTab] = useState("API Keys");
+  const tabs = ["API Keys", "Connexion Supabase"];
+  const [settings, setSettings] = useState<any>({ groq_api_key: "", gemini_api_key: "", openai_api_key: "" });
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
   const [showKeys, setShowKeys] = useState<Record<string, boolean>>({});
-  const tabs = ["API Keys", "Surveillance", "Notifications", "Intégrations", "Général"];
 
-  const apiKeys = [
-    { name: "Gemini API", key: "AIzaSy••••••••••••••••••••••••••XyZ9", provider: "Google", status: "actif" },
-    { name: "Groq API", key: "gsk_••••••••••••••••••••••••••••••AbC3", provider: "Groq", status: "actif" },
-    { name: "OpenAI API", key: "sk-proj-••••••••••••••••••••••••••••••", provider: "OpenAI", status: "inactif" },
-    { name: "Supabase URL", key: "https://xxxx.supabase.co", provider: "Supabase", status: "actif" },
-    { name: "Supabase Anon Key", key: "eyJhbGci••••••••••••••••••••••••••••", provider: "Supabase", status: "actif" },
+  useEffect(() => { load(); }, []);
+
+  async function load() {
+    setLoading(true);
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    const { data } = await supabase.from("settings").select("*").eq("user_id", user.id).maybeSingle();
+    setSettings(data || { groq_api_key: "", gemini_api_key: "", openai_api_key: "" });
+    setLoading(false);
+  }
+
+  async function save() {
+    setSaving(true);
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    await supabase.from("settings").upsert({ ...settings, user_id: user.id });
+    setSaving(false);
+    setSaved(true);
+    setTimeout(() => setSaved(false), 2000);
+  }
+
+  const keyFields = [
+    { key: "groq_api_key", label: "Groq API", provider: "Groq", help: "Utilisée par l'agent Rédaction — console.groq.com" },
+    { key: "gemini_api_key", label: "Gemini API", provider: "Google", help: "Utilisée par l'agent Contrôle Qualité (optionnel) — aistudio.google.com" },
+    { key: "openai_api_key", label: "OpenAI API", provider: "OpenAI", help: "Réservée à un usage futur, non utilisée par le pipeline actuel" },
   ];
 
   return (
     <div className="max-w-3xl space-y-5">
       <div className="flex items-center gap-1 border-b border-white/5 pb-0">
-        {tabs.map(t => (
+        {tabs.map((t) => (
           <button key={t} onClick={() => setTab(t)} className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-all -mb-px ${tab === t ? "border-[#6366f1] text-[#a5b4fc]" : "border-transparent text-[#7878a0] hover:text-[#c4c4d8]"}`}>
             {t}
           </button>
@@ -1110,162 +1370,144 @@ function SettingsPage() {
         <div className="space-y-4">
           <div className="flex items-center gap-2 p-3.5 rounded-xl bg-amber-500/8 border border-amber-500/15">
             <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0" />
-            <p className="text-amber-400/80 text-xs">Ne partagez jamais vos clés API. Elles sont chiffrées et stockées de façon sécurisée.</p>
+            <p className="text-amber-400/80 text-xs">Stockées dans la table <code>settings</code>, protégées par RLS (visibles uniquement par toi). Le pipeline les utilise en priorité par rapport aux secrets GitHub Actions.</p>
           </div>
-          <div className="space-y-3">
-            {apiKeys.map((api) => (
-              <Card key={api.name} className="p-4">
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center gap-2">
-                    <Key className="w-4 h-4 text-[#6366f1]" />
-                    <span className="text-[#e2e2f0] text-sm font-medium">{api.name}</span>
-                    <span className="text-[10px] text-[#7878a0] bg-white/5 px-1.5 py-0.5 rounded">{api.provider}</span>
+          {loading ? <Loading /> : (
+            <div className="space-y-3">
+              {keyFields.map((f) => (
+                <Card key={f.key} className="p-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <Key className="w-4 h-4 text-[#6366f1]" />
+                      <span className="text-[#e2e2f0] text-sm font-medium">{f.label}</span>
+                      <span className="text-[10px] text-[#7878a0] bg-white/5 px-1.5 py-0.5 rounded">{f.provider}</span>
+                    </div>
+                    <StatusBadge status={settings[f.key] ? "actif" : "inactif"} />
                   </div>
-                  <StatusBadge status={api.status} />
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="flex-1 bg-[#1c1c2e] border border-white/8 rounded-lg px-3 py-2 text-xs font-mono text-[#7878a0]">
-                    {showKeys[api.name] ? api.key : api.key.replace(/[^•]/g, (c, i) => i > 8 ? c : c)}
+                  <div className="flex items-center gap-2 mb-1.5">
+                    <input
+                      type={showKeys[f.key] ? "text" : "password"}
+                      value={settings[f.key] || ""}
+                      onChange={(e) => setSettings({ ...settings, [f.key]: e.target.value })}
+                      placeholder="Coller la clé ici"
+                      className="flex-1 bg-[#1c1c2e] border border-white/8 rounded-lg px-3 py-2 text-xs font-mono text-[#e2e2f0]"
+                    />
+                    <button onClick={() => setShowKeys((k) => ({ ...k, [f.key]: !k[f.key] }))} className="p-2 rounded-lg hover:bg-white/8 text-[#7878a0]">
+                      {showKeys[f.key] ? <EyeOff className="w-4 h-4" /> : <EyeIcon className="w-4 h-4" />}
+                    </button>
                   </div>
-                  <button onClick={() => setShowKeys(k => ({ ...k, [api.name]: !k[api.name] }))} className="p-2 rounded-lg hover:bg-white/8 text-[#7878a0]">
-                    {showKeys[api.name] ? <EyeOff className="w-4 h-4" /> : <EyeIcon className="w-4 h-4" />}
-                  </button>
-                  <button className="p-2 rounded-lg hover:bg-white/8 text-[#7878a0]"><Copy className="w-4 h-4" /></button>
-                  <button className="p-2 rounded-lg hover:bg-white/8 text-[#7878a0]"><Edit className="w-4 h-4" /></button>
-                </div>
-              </Card>
-            ))}
-          </div>
-          <Btn icon={<Plus className="w-3.5 h-3.5" />} variant="secondary">Ajouter une clé API</Btn>
+                  <p className="text-[10px] text-[#5858a0]">{f.help}</p>
+                </Card>
+              ))}
+              <div className="flex items-center gap-3">
+                <Btn icon={<Save className="w-3.5 h-3.5" />} variant="primary" onClick={save} disabled={saving}>{saving ? "Enregistrement…" : "Enregistrer"}</Btn>
+                {saved && <span className="text-emerald-400 text-xs">Enregistré.</span>}
+              </div>
+            </div>
+          )}
         </div>
       )}
 
-      {tab === "Surveillance" && (
-        <Card className="p-5 space-y-5">
-          {[
-            { label: "Fréquence par défaut", desc: "Fréquence d'analyse des nouvelles sources", options: ["Quotidien", "Bihebdomadaire", "Hebdomadaire"] },
-            { label: "Profondeur d'analyse", desc: "Nombre de pages à analyser par source", options: ["Légère (5 pages)", "Standard (20 pages)", "Approfondie (50+ pages)"] },
-            { label: "Langue des rapports", desc: "Langue de génération des synthèses", options: ["Français", "Anglais", "Bilingue"] },
-          ].map(s => (
-            <div key={s.label} className="flex items-start justify-between gap-4">
-              <div>
-                <div className="text-[#e2e2f0] text-sm font-medium">{s.label}</div>
-                <div className="text-[#7878a0] text-xs mt-0.5">{s.desc}</div>
-              </div>
-              <select className="bg-[#1c1c2e] border border-white/10 rounded-lg px-3 py-1.5 text-xs text-[#c4c4d8] focus:outline-none shrink-0">
-                {s.options.map(o => <option key={o}>{o}</option>)}
-              </select>
-            </div>
-          ))}
-          <div className="h-px bg-white/5" />
-          {[
-            { label: "Score de confiance minimum", desc: "Publier uniquement les rapports avec un score ≥ à ce seuil" },
-            { label: "Alerte automatique si score < 70%", desc: "Notifier l'équipe si le score de confiance est insuffisant" },
-          ].map(s => (
-            <div key={s.label} className="flex items-center justify-between gap-4">
-              <div>
-                <div className="text-[#e2e2f0] text-sm font-medium">{s.label}</div>
-                <div className="text-[#7878a0] text-xs mt-0.5">{s.desc}</div>
-              </div>
-              <div className="w-10 h-6 rounded-full bg-[#6366f1] relative cursor-pointer shrink-0">
-                <div className="w-4 h-4 bg-white rounded-full absolute top-1 right-1 transition-all" />
-              </div>
-            </div>
-          ))}
-          <div className="pt-2">
-            <Btn icon={<Save className="w-3.5 h-3.5" />} variant="primary">Enregistrer les paramètres</Btn>
-          </div>
-        </Card>
-      )}
-
-      {tab === "Notifications" && (
+      {tab === "Connexion Supabase" && (
         <Card className="p-5 space-y-4">
-          {[
-            { label: "Alertes critiques", desc: "Levées de fonds, lancements produits majeurs", email: true, slack: true },
-            { label: "Nouveaux rapports", desc: "Notification lors de la publication d'un rapport", email: true, slack: false },
-            { label: "Résumé quotidien", desc: "Digest des activités de la journée", email: false, slack: true },
-            { label: "Erreurs d'agents", desc: "Alertes en cas de défaillance d'un agent IA", email: true, slack: true },
-            { label: "Changements tarifaires", desc: "Modification des prix ou offres concurrents", email: true, slack: false },
-          ].map(n => (
-            <div key={n.label} className="flex items-center justify-between gap-4 py-2 border-b border-white/5 last:border-b-0">
-              <div>
-                <div className="text-[#e2e2f0] text-sm font-medium">{n.label}</div>
-                <div className="text-[#7878a0] text-xs mt-0.5">{n.desc}</div>
-              </div>
-              <div className="flex items-center gap-3">
-                <label className="flex items-center gap-1.5 text-xs text-[#7878a0]">
-                  <div className={`w-8 h-4.5 rounded-full relative cursor-pointer ${n.email ? "bg-[#6366f1]" : "bg-white/10"}`}>
-                    <div className={`w-3 h-3 bg-white rounded-full absolute top-0.5 transition-all ${n.email ? "right-0.5" : "left-0.5"}`} />
-                  </div>
-                  Email
-                </label>
-                <label className="flex items-center gap-1.5 text-xs text-[#7878a0]">
-                  <div className={`w-8 h-4.5 rounded-full relative cursor-pointer ${n.slack ? "bg-[#6366f1]" : "bg-white/10"}`}>
-                    <div className={`w-3 h-3 bg-white rounded-full absolute top-0.5 transition-all ${n.slack ? "right-0.5" : "left-0.5"}`} />
-                  </div>
-                  Slack
-                </label>
-              </div>
+          <p className="text-[#7878a0] text-xs leading-relaxed">
+            Ces valeurs configurent la connexion elle-même : elles se règlent dans les variables d'environnement
+            Vercel (<code className="text-[#a5b4fc]">VITE_SUPABASE_URL</code>, <code className="text-[#a5b4fc]">VITE_SUPABASE_ANON_KEY</code>),
+            pas depuis cette page — les modifier ici n'aurait aucun effet tant que l'app n'est pas rebuild.
+          </p>
+          <div>
+            <label className="block text-[10px] text-[#5858a0] mb-1">VITE_SUPABASE_URL (actuelle)</label>
+            <div className="bg-[#1c1c2e] border border-white/8 rounded-lg px-3 py-2 text-xs font-mono text-[#7878a0] truncate">
+              {(import.meta as any).env?.VITE_SUPABASE_URL || "non configurée"}
             </div>
-          ))}
-        </Card>
-      )}
-
-      {(tab === "Intégrations" || tab === "Général") && (
-        <Card className="p-12 flex flex-col items-center justify-center text-center gap-3">
-          <div className="w-12 h-12 rounded-2xl bg-[#6366f1]/10 flex items-center justify-center">
-            <Webhook className="w-6 h-6 text-[#6366f1]" />
           </div>
-          <div className="text-[#e2e2f0] font-semibold">Section {tab}</div>
-          <div className="text-[#7878a0] text-sm max-w-xs">Cette section est en cours de développement et sera disponible prochainement.</div>
         </Card>
       )}
     </div>
   );
 }
 
-// ─── PROFILE PAGE ─────────────────────────────────────────────────────────────
+// ─── PROFIL ───────────────────────────────────────────────────────────────────
 
 function ProfilePage() {
+  const [loading, setLoading] = useState(true);
+  const [profile, setProfile] = useState<any>(null);
+  const [email, setEmail] = useState("");
+  const [fullName, setFullName] = useState("");
+  const [stats, setStats] = useState({ reports: 0, competitors: 0, alerts: 0, daysActive: 0 });
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+
+  useEffect(() => { load(); }, []);
+
+  async function load() {
+    setLoading(true);
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    const [{ data: prof }, { count: reportsCount }, { count: competitorsCount }, { count: alertsCount }] = await Promise.all([
+      supabase.from("profiles").select("*").eq("id", user.id).maybeSingle(),
+      supabase.from("reports").select("id", { count: "exact", head: true }),
+      supabase.from("competitors").select("id", { count: "exact", head: true }),
+      supabase.from("alerts").select("id", { count: "exact", head: true }),
+    ]);
+    setProfile(prof);
+    setEmail(user.email || "");
+    setFullName(prof?.full_name || "");
+    const created = user.created_at ? new Date(user.created_at) : new Date();
+    setStats({
+      reports: reportsCount || 0,
+      competitors: competitorsCount || 0,
+      alerts: alertsCount || 0,
+      daysActive: Math.max(1, Math.floor((Date.now() - created.getTime()) / 86400000)),
+    });
+    setLoading(false);
+  }
+
+  async function save() {
+    setSaving(true);
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    await supabase.from("profiles").upsert({ id: user.id, full_name: fullName });
+    setSaving(false);
+    setSaved(true);
+    setTimeout(() => setSaved(false), 2000);
+  }
+
+  if (loading) return <Loading />;
+
   return (
     <div className="max-w-2xl space-y-5">
-      {/* Header */}
       <Card className="overflow-hidden">
-        <div className="h-24 bg-gradient-to-r from-[#6366f1] to-[#22d3ee] relative">
-          <div className="absolute inset-0 opacity-30" style={{ backgroundImage: "radial-gradient(circle at 2px 2px, white 1px, transparent 0)", backgroundSize: "24px 24px" }} />
-        </div>
+        <div className="h-24 bg-gradient-to-r from-[#6366f1] to-[#22d3ee] relative" />
         <div className="px-6 pb-6">
           <div className="flex items-end justify-between -mt-6 mb-4">
-            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#6366f1] to-[#22d3ee] flex items-center justify-center text-white text-xl font-bold border-4 border-[#111119]">AM</div>
-            <Btn icon={<Edit className="w-3.5 h-3.5" />} variant="secondary">Modifier</Btn>
+            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#6366f1] to-[#22d3ee] flex items-center justify-center text-white text-xl font-bold border-4 border-[#111119]">
+              {initialsFor(fullName || email)}
+            </div>
           </div>
           <div className="flex items-start justify-between">
             <div>
               <div className="flex items-center gap-2">
-                <h2 className="text-[#e2e2f0] font-bold text-lg">Alexandre Martin</h2>
+                <h2 className="text-[#e2e2f0] font-bold text-lg">{fullName || "Sans nom"}</h2>
                 <BadgeCheck className="w-5 h-5 text-[#6366f1]" />
               </div>
-              <div className="text-[#7878a0] text-sm">alexandre.martin@acme.io</div>
-              <div className="text-[#5858a0] text-xs mt-1 flex items-center gap-1.5">
-                <Building2 className="w-3 h-3" /> Acme Corp · Directeur Produit
-              </div>
+              <div className="text-[#7878a0] text-sm">{email}</div>
             </div>
             <div className="flex items-center gap-2 bg-gradient-to-r from-[#6366f1]/10 to-[#8b5cf6]/10 border border-[#6366f1]/20 px-3 py-1.5 rounded-xl">
               <Star className="w-3.5 h-3.5 text-[#f59e0b]" />
-              <span className="text-xs font-semibold text-[#a5b4fc]">Pro</span>
+              <span className="text-xs font-semibold text-[#a5b4fc]">{profile?.plan === "pro" ? "Pro" : "Free"}</span>
             </div>
           </div>
         </div>
       </Card>
 
-      {/* Stats */}
       <div className="grid grid-cols-4 gap-3">
         {[
-          { label: "Rapports générés", value: "142", icon: FileText, color: "#6366f1" },
-          { label: "Concurrents", value: "12", icon: Users, color: "#8b5cf6" },
-          { label: "Alertes reçues", value: "847", icon: Bell, color: "#22d3ee" },
-          { label: "Jours actif", value: "94", icon: Activity, color: "#10b981" },
-        ].map(s => (
+          { label: "Rapports générés", value: String(stats.reports), icon: FileText, color: "#6366f1" },
+          { label: "Concurrents", value: String(stats.competitors), icon: Users, color: "#8b5cf6" },
+          { label: "Alertes reçues", value: String(stats.alerts), icon: Bell, color: "#22d3ee" },
+          { label: "Jours actif", value: String(stats.daysActive), icon: Activity, color: "#10b981" },
+        ].map((s) => (
           <Card key={s.label} className="p-4 text-center">
             <div className="w-8 h-8 rounded-lg mx-auto mb-2 flex items-center justify-center" style={{ backgroundColor: s.color + "15" }}>
               <s.icon className="w-4 h-4" style={{ color: s.color }} />
@@ -1276,98 +1518,83 @@ function ProfilePage() {
         ))}
       </div>
 
-      {/* Subscription */}
-      <Card className="p-5">
-        <div className="flex items-center gap-2 mb-4">
-          <CreditCard className="w-4 h-4 text-[#6366f1]" />
-          <h3 className="text-[#e2e2f0] font-semibold text-sm">Abonnement</h3>
-        </div>
-        <div className="flex items-center justify-between p-4 rounded-xl bg-gradient-to-r from-[#6366f1]/8 to-[#8b5cf6]/8 border border-[#6366f1]/15 mb-4">
-          <div>
-            <div className="flex items-center gap-2 mb-0.5">
-              <span className="text-[#e2e2f0] font-semibold">Plan Pro</span>
-              <span className="text-xs bg-[#f59e0b]/15 text-[#f59e0b] px-2 py-0.5 rounded-full font-medium">Actif</span>
-            </div>
-            <div className="text-[#7878a0] text-xs">Renouvellement le 9 juillet 2026 · 49€/mois</div>
-          </div>
-          <div className="text-right">
-            <div className="text-[#e2e2f0] text-sm font-semibold font-mono">8 jours</div>
-            <div className="text-[#7878a0] text-xs">restants</div>
-          </div>
-        </div>
-        <div className="grid grid-cols-3 gap-3 text-center text-xs text-[#7878a0]">
-          {["12/20 Concurrents", "1 284/5 000 Sources", "142/∞ Rapports"].map(f => (
-            <div key={f} className="bg-white/3 rounded-lg p-2.5 text-[#c4c4d8] font-medium">{f}</div>
-          ))}
-        </div>
-      </Card>
-
-      {/* Personal info */}
       <Card className="p-5">
         <h3 className="text-[#e2e2f0] font-semibold text-sm mb-4">Informations personnelles</h3>
         <div className="grid grid-cols-2 gap-4">
-          {[
-            { label: "Prénom", value: "Alexandre" },
-            { label: "Nom", value: "Martin" },
-            { label: "Email", value: "alexandre.martin@acme.io" },
-            { label: "Entreprise", value: "Acme Corp" },
-          ].map(f => (
-            <div key={f.label}>
-              <label className="block text-xs font-medium text-[#7878a0] mb-1.5">{f.label}</label>
-              <input defaultValue={f.value} className="w-full bg-[#1c1c2e] border border-white/10 rounded-xl px-3 py-2 text-sm text-[#e2e2f0] focus:outline-none focus:border-[#6366f1]/60 transition-all" />
-            </div>
-          ))}
+          <div>
+            <label className="block text-xs font-medium text-[#7878a0] mb-1.5">Nom complet</label>
+            <input value={fullName} onChange={(e) => setFullName(e.target.value)} className="w-full bg-[#1c1c2e] border border-white/10 rounded-xl px-3 py-2 text-sm text-[#e2e2f0] focus:outline-none focus:border-[#6366f1]/60 transition-all" />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-[#7878a0] mb-1.5">Email</label>
+            <input value={email} disabled className="w-full bg-[#1c1c2e] border border-white/10 rounded-xl px-3 py-2 text-sm text-[#7878a0] opacity-60" />
+          </div>
         </div>
-        <div className="mt-4">
-          <Btn icon={<Save className="w-3.5 h-3.5" />} variant="primary">Sauvegarder</Btn>
+        <div className="mt-4 flex items-center gap-3">
+          <Btn icon={<Save className="w-3.5 h-3.5" />} variant="primary" onClick={save} disabled={saving}>{saving ? "…" : "Sauvegarder"}</Btn>
+          {saved && <span className="text-emerald-400 text-xs">Enregistré.</span>}
         </div>
       </Card>
     </div>
   );
 }
 
-// ─── MAIN APP ─────────────────────────────────────────────────────────────────
+// ─── APP ──────────────────────────────────────────────────────────────────────
 
 const pageTitles: Record<string, { title: string; subtitle?: string }> = {
-  dashboard: { title: "Tableau de bord", subtitle: "Mardi 1 juillet 2026" },
-  competitors: { title: "Concurrents", subtitle: "12 concurrents surveillés" },
-  sources: { title: "Sources", subtitle: "1 284 sources actives" },
-  reports: { title: "Rapports IA", subtitle: "Synthèses générées automatiquement" },
+  dashboard: { title: "Tableau de bord" },
+  competitors: { title: "Concurrents" },
+  sources: { title: "Sources" },
+  reports: { title: "Rapports IA" },
   "report-detail": { title: "Détail du rapport" },
   agents: { title: "Agents IA", subtitle: "Architecture multi-agents" },
-  history: { title: "Historique", subtitle: "Timeline des analyses" },
-  alerts: { title: "Alertes", subtitle: "Modifications importantes détectées" },
-  settings: { title: "Paramètres", subtitle: "Configuration de la plateforme" },
+  history: { title: "Historique" },
+  alerts: { title: "Alertes" },
+  settings: { title: "Paramètres" },
   profile: { title: "Profil utilisateur" },
 };
 
 export default function App() {
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [session, setSession] = useState<any>(undefined); // undefined = chargement
+  const [profile, setProfile] = useState<any>(null);
   const [page, setPage] = useState("dashboard");
-  const [selectedRpt, setSelectedRpt] = useState<typeof reports[0] | null>(null);
+  const [selectedReportId, setSelectedReportId] = useState<string | null>(null);
 
-  const handleSelectReport = (r: typeof reports[0]) => {
-    setSelectedRpt(r);
-    setPage("report-detail");
-  };
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => setSession(data.session));
+    const { data: sub } = supabase.auth.onAuthStateChange((_event, s) => setSession(s));
+    return () => sub.subscription.unsubscribe();
+  }, []);
 
-  if (!isLoggedIn) {
-    return (
-      <div className="dark">
-        <LoginPage onLogin={() => setIsLoggedIn(true)} />
-      </div>
-    );
+  useEffect(() => {
+    if (session === null || session === undefined) { setProfile(null); return; }
+    supabase.from("profiles").select("*").eq("id", session.user.id).maybeSingle().then(({ data }) => {
+      setProfile({ ...data, email: session.user.email });
+    });
+  }, [session]);
+
+  if (session === undefined) {
+    return <div className="min-h-screen bg-[#09090f] flex items-center justify-center text-[#7878a0] text-sm">Chargement…</div>;
+  }
+
+  if (!session) {
+    return <div className="dark"><LoginPage /></div>;
   }
 
   const pageInfo = pageTitles[page] ?? { title: page };
 
-  const renderPage = () => {
+  function handleSelectReport(id: string) {
+    setSelectedReportId(id);
+    setPage("report-detail");
+  }
+
+  function renderPage() {
     switch (page) {
       case "dashboard": return <DashboardPage setPage={setPage} />;
       case "competitors": return <CompetitorsPage />;
       case "sources": return <SourcesPage />;
       case "reports": return <ReportsPage onSelect={handleSelectReport} />;
-      case "report-detail": return selectedRpt ? <ReportDetailPage report={selectedRpt} onBack={() => setPage("reports")} /> : null;
+      case "report-detail": return selectedReportId ? <ReportDetailPage reportId={selectedReportId} onBack={() => setPage("reports")} /> : null;
       case "agents": return <AgentsPage />;
       case "history": return <HistoryPage />;
       case "alerts": return <AlertsPage />;
@@ -1375,12 +1602,12 @@ export default function App() {
       case "profile": return <ProfilePage />;
       default: return <DashboardPage setPage={setPage} />;
     }
-  };
+  }
 
   return (
     <div className="dark" style={{ fontFamily: "'Inter', sans-serif" }}>
       <div className="flex h-screen bg-[#09090f] text-[#e2e2f0] overflow-hidden">
-        <Sidebar page={page} setPage={(p) => { setPage(p); setSelectedRpt(null); }} />
+        <Sidebar page={page} setPage={(p) => { setPage(p); setSelectedReportId(null); }} profile={profile} onLogout={() => supabase.auth.signOut()} />
         <div className="flex-1 flex flex-col overflow-hidden min-w-0">
           <TopBar title={pageInfo.title} subtitle={pageInfo.subtitle} />
           <main className="flex-1 overflow-y-auto p-6 scrollbar-hide">
