@@ -42,7 +42,7 @@ def main():
     # Charge les paramètres de cet utilisateur
     rows = db.select("settings", {"user_id": user_id}, limit=1)
     if rows:
-    config["GROQ_API_KEY"] = rows[0].get("groq_api_key") or config["GROQ_API_KEY"]
+        config["GROQ_API_KEY"] = rows[0].get("groq_api_key") or config["GROQ_API_KEY"]
 
     if not config["GROQ_API_KEY"]:
         _fail(db, request_id, "Aucune clé Groq disponible.")
