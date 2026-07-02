@@ -9,7 +9,7 @@ import {
   ExternalLink, MoreHorizontal, AlertTriangle, ChevronRight, LogOut, Link as LinkIcon,
   Github, Key, CheckCircle2, XCircle, Building2, BarChart2,
   Star, ArrowLeft, Target, Circle, PauseCircle, PlayCircle, Copy,
-  Globe2, Save, Eye as EyeIcon, EyeOff, BadgeCheck,
+  Globe2, Save, Eye as EyeIcon, EyeOff, BadgeCheck, Rocket, Sparkles,
 } from "lucide-react";
 import { supabase } from "./lib/supabaseClient";
 import { AGENT_META, AGENT_ORDER, type AgentName } from "./lib/agentMeta";
@@ -122,6 +122,7 @@ function EmptyState({ label }: { label: string }) {
 
 const navItems = [
   { id: "dashboard", label: "Tableau de bord", icon: LayoutDashboard },
+  { id: "discovery", label: "Découverte", icon: Rocket },
   { id: "competitors", label: "Concurrents", icon: Users },
   { id: "sources", label: "Sources", icon: Globe },
   { id: "reports", label: "Rapports IA", icon: FileText },
@@ -550,6 +551,164 @@ function DashboardPage({ setPage }: { setPage: (p: string) => void }) {
             </div>
           )}
         </Card>
+      </div>
+    </div>
+  );
+}
+
+// ─── DÉCOUVERTE ───────────────────────────────────────────────────────────────
+
+function DiscoveryPage() {
+  const [companyName, setCompanyName] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [activeRequest, setActiveRequest] = useState<any>(null);
+  const [history, setHistory] = useState<any[]>([]);
+  const [loadingHistory, setLoadingHistory] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => { loadHistory(); }, []);
+
+  // Tant qu'une demande est en cours (pending/running), on la repolle
+  // toutes les 3s jusqu'à done/error — pas de websocket nécessaire ici.
+  useEffect(() => {
+    if (!activeRequest || activeRequest.status === "done" || activeRequest.status === "error") return;
+    const interval = setInterval(async () => {
+      const { data } = await supabase.from("discovery_requests").select("*").eq("id", activeRequest.id).single();
+      if (data) {
+        setActiveRequest(data);
+        if (data.status === "done" || data.status === "error") loadHistory();
+      }
+    }, 3000);
+    return () => clearInterval(interval);
+  }, [activeRequest]);
+
+  async function loadHistory() {
+    setLoadingHistory(true);
+    const { data } = await supabase.from("discovery_requests").select("*").order("created_at", { ascending: false }).limit(10);
+    setHistory(data || []);
+    setLoadingHistory(false);
+  }
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!companyName.trim()) return;
+    setError(null);
+    setSubmitting(true);
+
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) { setSubmitting(false); return; }
+
+    const { data: request, error: insertError } = await supabase
+      .from("discovery_requests")
+      .insert({ user_id: user.id, company_name: companyName.trim(), status: "pending" })
+      .select()
+      .single();
+
+    if (insertError || !request) {
+      setError(insertError?.message || "Impossible de créer la demande.");
+      setSubmitting(false);
+      return;
+    }
+
+    setActiveRequest(request);
+
+    const { error: fnError } = await supabase.functions.invoke("trigger-discovery", {
+      body: { company_name: companyName.trim(), request_id: request.id },
+    });
+
+    if (fnError) {
+      setError("Le déclenchement a échoué : " + fnError.message + " — vérifie que l'Edge Function trigger-discovery est bien déployée avec ses secrets GitHub.");
+    }
+
+    setCompanyName("");
+    setSubmitting(false);
+  }
+
+  return (
+    <div className="max-w-2xl space-y-6">
+      <Card className="p-6">
+        <div className="flex items-center gap-2 mb-1">
+          <Sparkles className="w-4 h-4 text-[#6366f1]" />
+          <h3 className="text-[#e2e2f0] font-semibold text-sm">Trouver des concurrents automatiquement</h3>
+        </div>
+        <p className="text-[#7878a0] text-xs mb-4 leading-relaxed">
+          Entre le nom d'une entreprise (la tienne, ou un concurrent connu comme point de départ) — le pipeline
+          cherche sur le web ses concurrents probables et les ajoute directement à ta liste de surveillance.
+          Vérifie la liste obtenue avant de la laisser tourner : la recherche automatique peut se tromper sur des marchés de niche.
+        </p>
+        <form onSubmit={submit} className="flex items-center gap-2">
+          <input
+            value={companyName}
+            onChange={(e) => setCompanyName(e.target.value)}
+            placeholder="Ex. Notion, Stripe, Linear…"
+            className="flex-1 bg-[#1c1c2e] border border-white/10 rounded-xl px-3.5 py-2.5 text-sm text-[#e2e2f0] placeholder:text-[#5858a0] focus:outline-none focus:border-[#6366f1]/60"
+          />
+          <Btn variant="primary" icon={<Rocket className="w-3.5 h-3.5" />} disabled={submitting || !companyName.trim()} onClick={() => {}}>
+            {submitting ? "…" : "Lancer"}
+          </Btn>
+        </form>
+        {error && <div className="text-xs text-red-400 mt-3">{error}</div>}
+      </Card>
+
+      {activeRequest && (
+        <Card className="p-5">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <span className="text-[#e2e2f0] text-sm font-medium">{activeRequest.company_name}</span>
+            </div>
+            <StatusBadge status={
+              activeRequest.status === "pending" ? "en attente" :
+              activeRequest.status === "running" ? "actif" :
+              activeRequest.status === "done" ? "publie" : "erreur"
+            } />
+          </div>
+
+          {(activeRequest.status === "pending" || activeRequest.status === "running") && (
+            <div className="flex items-center gap-2 text-[#7878a0] text-xs"><Loader2 className="w-3.5 h-3.5 animate-spin" /> Recherche en cours — ça prend généralement 1 à 2 minutes (démarrage du workflow GitHub Actions inclus).</div>
+          )}
+
+          {activeRequest.status === "error" && (
+            <div className="text-xs text-red-400">{activeRequest.error_message || "Erreur inconnue."}</div>
+          )}
+
+          {activeRequest.status === "done" && (
+            <div>
+              {(activeRequest.results || []).length === 0 ? (
+                <EmptyState label="Aucun concurrent identifié avec confiance suffisante." />
+              ) : (
+                <div className="space-y-2">
+                  {(activeRequest.results || []).map((r: any, i: number) => (
+                    <div key={i} className="flex items-center gap-3 p-2.5 rounded-lg bg-white/3">
+                      <Avatar name={r.name} color={colorFor(r.name)} size="sm" />
+                      <span className="text-[#c4c4d8] text-xs flex-1">{r.name}</span>
+                      {r.website && <span className="text-[#5858a0] text-[10px] font-mono">{r.website}</span>}
+                    </div>
+                  ))}
+                </div>
+              )}
+              <p className="text-[10px] text-[#5858a0] mt-3">Déjà ajoutés à la page Concurrents — vérifie-les et désactive ceux qui ne sont pas pertinents.</p>
+            </div>
+          )}
+        </Card>
+      )}
+
+      <div>
+        <div className="text-[10px] text-[#5858a0] uppercase tracking-wider mb-2">Demandes précédentes</div>
+        {loadingHistory ? <Loading /> : history.length === 0 ? <EmptyState label="Aucune demande encore." /> : (
+          <div className="space-y-1.5">
+            {history.map((h) => (
+              <div key={h.id} className="flex items-center gap-3 p-2.5 rounded-lg hover:bg-white/3 text-xs">
+                <span className="text-[#c4c4d8] flex-1">{h.company_name}</span>
+                <span className="text-[#5858a0]">{timeAgo(h.created_at)}</span>
+                <StatusBadge status={
+                  h.status === "pending" ? "en attente" :
+                  h.status === "running" ? "actif" :
+                  h.status === "done" ? "publie" : "erreur"
+                } />
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
@@ -1543,6 +1702,7 @@ function ProfilePage() {
 
 const pageTitles: Record<string, { title: string; subtitle?: string }> = {
   dashboard: { title: "Tableau de bord" },
+  discovery: { title: "Découverte", subtitle: "Trouver des concurrents automatiquement" },
   competitors: { title: "Concurrents" },
   sources: { title: "Sources" },
   reports: { title: "Rapports IA" },
@@ -1591,6 +1751,7 @@ export default function App() {
   function renderPage() {
     switch (page) {
       case "dashboard": return <DashboardPage setPage={setPage} />;
+      case "discovery": return <DiscoveryPage />;
       case "competitors": return <CompetitorsPage />;
       case "sources": return <SourcesPage />;
       case "reports": return <ReportsPage onSelect={handleSelectReport} />;
