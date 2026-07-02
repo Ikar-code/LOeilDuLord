@@ -1,6 +1,21 @@
+import time
+
 import requests
 
 TIMEOUT = 20
+MAX_RETRIES = 3
+
+
+def _with_retry(fn):
+    last_err = None
+    for attempt in range(MAX_RETRIES):
+        try:
+            return fn()
+        except (requests.exceptions.Timeout, requests.exceptions.ConnectionError) as e:
+            last_err = e
+            if attempt < MAX_RETRIES - 1:
+                time.sleep(2 * (attempt + 1))  # 2s, puis 4s
+    raise last_err
 
 
 class SupabaseClient:
@@ -18,7 +33,7 @@ class SupabaseClient:
 
     def insert(self, table, row, returning=True):
         headers = {**self.headers, "Prefer": "return=representation" if returning else "return=minimal"}
-        res = requests.post(f"{self.base}/{table}", json=row, headers=headers, timeout=TIMEOUT)
+        res = _with_retry(lambda: requests.post(f"{self.base}/{table}", json=row, headers=headers, timeout=TIMEOUT))
         res.raise_for_status()
         data = res.json() if returning else None
         return data[0] if returning and data else None
@@ -26,7 +41,7 @@ class SupabaseClient:
     def update(self, table, match, patch):
         params = {f"{k}": f"eq.{v}" for k, v in match.items()}
         headers = {**self.headers, "Prefer": "return=representation"}
-        res = requests.patch(f"{self.base}/{table}", params=params, json=patch, headers=headers, timeout=TIMEOUT)
+        res = _with_retry(lambda: requests.patch(f"{self.base}/{table}", params=params, json=patch, headers=headers, timeout=TIMEOUT))
         res.raise_for_status()
         return res.json()
 
@@ -39,6 +54,6 @@ class SupabaseClient:
             params["order"] = order
         if limit:
             params["limit"] = str(limit)
-        res = requests.get(f"{self.base}/{table}", params=params, headers=self.headers, timeout=TIMEOUT)
+        res = _with_retry(lambda: requests.get(f"{self.base}/{table}", params=params, headers=self.headers, timeout=TIMEOUT))
         res.raise_for_status()
         return res.json()
