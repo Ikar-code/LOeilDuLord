@@ -45,7 +45,10 @@ def main():
     try:
         found = discover_competitors(config, company_name)
         created = save_discovered_competitors(db, config, found)
-        results = [{"name": c["name"], "website": c.get("website")} for c in created]
+        results = [
+            {"name": c["name"], "website": c.get("website"), "verified": c.get("verified", True)}
+            for c in created
+        ]
 
         if request_id:
             db.update("discovery_requests", {"id": request_id}, {
