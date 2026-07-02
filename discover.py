@@ -30,10 +30,19 @@ def main():
 
     db = SupabaseClient(config["SUPABASE_URL"], config["SUPABASE_SERVICE_ROLE_KEY"])
 
-    # Les clés API peuvent venir de la table settings (voir main.py)
-    rows = db.select("settings", {"user_id": config["OWNER_USER_ID"]}, limit=1)
+    # Récupère l'utilisateur ayant créé la demande
+    request = db.select("discovery_requests", {"id": request_id}, limit=1)
+    
+    if not request:
+        _fail(db, request_id, "Demande de découverte introuvable.")
+        sys.exit(1)
+    
+    user_id = request[0]["user_id"]
+    
+    # Charge les paramètres de cet utilisateur
+    rows = db.select("settings", {"user_id": user_id}, limit=1)
     if rows:
-        config["GROQ_API_KEY"] = rows[0].get("groq_api_key") or config["GROQ_API_KEY"]
+    config["GROQ_API_KEY"] = rows[0].get("groq_api_key") or config["GROQ_API_KEY"]
 
     if not config["GROQ_API_KEY"]:
         _fail(db, request_id, "Aucune clé Groq disponible.")
