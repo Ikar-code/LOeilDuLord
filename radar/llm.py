@@ -21,6 +21,12 @@ def groq_complete(api_key, system, user, temperature=0.3):
     last_err = None
     for model in (GROQ_PRIMARY_MODEL, GROQ_FALLBACK_MODEL):
         try:
+            kwargs = {}
+            if model == GROQ_PRIMARY_MODEL:
+                # qwen3-32b est un modèle "à raisonnement" : sans ce paramètre,
+                # il inclut son raisonnement brut (balises <think>...</think>)
+                # dans la réponse, ce qui casse le parsing JSON en aval.
+                kwargs["reasoning_format"] = "hidden"
             resp = client.chat.completions.create(
                 model=model,
                 temperature=temperature,
@@ -28,6 +34,7 @@ def groq_complete(api_key, system, user, temperature=0.3):
                     {"role": "system", "content": system},
                     {"role": "user", "content": user},
                 ],
+                **kwargs,
             )
             return resp.choices[0].message.content.strip()
         except Exception as e:  # noqa: BLE001 - on tente le modèle de repli
