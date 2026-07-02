@@ -38,6 +38,7 @@ def main():
         sys.exit(1)
     
     user_id = request[0]["user_id"]
+    config["USER_ID"] = user_id
     
     # Charge les paramètres de cet utilisateur
     rows = db.select("settings", {"user_id": user_id}, limit=1)
