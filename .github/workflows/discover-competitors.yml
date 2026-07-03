@@ -3,13 +3,9 @@ name: Discover Competitors
 on:
   workflow_dispatch:
     inputs:
-      company_name:
-        description: "Nom de l'entreprise à analyser"
-        required: true
       request_id:
-        description: "id de la ligne discovery_requests à mettre à jour (optionnel)"
-        required: false
-        default: ""
+        description: "id de la ligne discovery_requests à traiter (obligatoire) — fait foi pour le nom de l'entreprise et l'utilisateur"
+        required: true
 
 jobs:
   discover:
@@ -25,8 +21,6 @@ jobs:
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-          OWNER_USER_ID: ${{ secrets.OWNER_USER_ID }}
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
-          COMPANY_NAME: ${{ inputs.company_name }}
           REQUEST_ID: ${{ inputs.request_id }}
         run: python discover.py
