@@ -170,15 +170,14 @@ def _normalize_website(website):
     return website
 
 
-def save_discovered_competitors(db, config, competitors):
-    owner = config["USER_ID"]
-    existing_names = {c["name"].lower() for c in db.select("competitors", {"user_id": owner})}
+def save_discovered_competitors(db, user_id, competitors):
+    existing_names = {c["name"].lower() for c in db.select("competitors", {"user_id": user_id})}
     created = []
     for c in competitors:
         if c["name"].lower() in existing_names:
             continue
         row = db.insert("competitors", {
-            "user_id": owner,
+            "user_id": user_id,
             "name": c["name"],
             "website": _normalize_website(c.get("website")),
             "monitoring_frequency": "quotidien",
@@ -187,7 +186,7 @@ def save_discovered_competitors(db, config, competitors):
         website = row.get("website")
         if website:
             db.insert("sources", {
-                "user_id": owner,
+                "user_id": user_id,
                 "competitor_id": row["id"],
                 "type": "site_web",
                 "url": website,
